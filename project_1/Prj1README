@@ -1,0 +1,58 @@
+# CS4440 Project 1 - Concurrency via Unix Processes and Threads
+
+This project incrementally builds systems programming skills in C using Unix process control and threading, starting from file I/O up to multi-process and multi-threaded concurrency.
+
+What each part teaches:
+- System Calls: robust file I/O with open/read/write/close, error handling.
+- Parsing & Encoding: run-length compression of long runs (>=16) using tokens -N- (zeros) and +N+ (ones).
+- Decompression: token parsing and expansion with careful edge-case handling.
+- fork/exec/wait: process creation and program replacement; parent-child synchronization.
+- pipe/dup2: IPC and I/O redirection.
+- Concurrency: partitioning work across processes/threads and assembling results.
+- Mini Shell: command parsing and execution, arguments, and pipelines.
+
+Build (on macOS/Linux):
+- Prerequisites: a C toolchain (clang or gcc) and make.
+- In this directory, run:
+
+```
+make
+```
+
+This produces:
+- `MyCompress`, `MyDecompress`, `ForkCompress`
+
+Output location:
+- All programs write outputs to `project_1/outputs/` using the basename of the destination you pass.
+- Example: `./MyCompress input.txt compressed.txt` writes to `outputs/compressed.txt`.
+
+Run examples:
+```
+# Compress a file of '0'/'1' characters separated by spaces/newlines
+./MyCompress input_bits.txt compressed.txt   # creates outputs/compressed.txt
+
+# Decompress (source is the file inside outputs/)
+./MyDecompress outputs/compressed.txt decompressed.txt  # creates outputs/decompressed.txt
+
+# Fork + exec MyCompress
+./ForkCompress input_bits.txt compressed_via_fork.txt  # creates outputs/compressed_via_fork.txt
+```
+
+Notes:
+- Compression rule: sequences with length >= 16 are encoded as tokens: `-N-` for zeros, `+N+` for ones; shorter runs are copied as-is. Separators (space/newline) are preserved.
+- Decompress expands those tokens back to bits and passes through other characters.
+- Use large files to measure timings for parts (10) later.
+
+Cleaning:
+```
+make clean
+```
+
+Testing correctness:
+- After compress+decompress, `diff` the original and decompressed files. They should match.
+
+```
+./MyCompress big_input.txt big_compressed.txt
+./MyDecompress outputs/big_compressed.txt big_out.txt
+diff -u big_input.txt outputs/big_out.txt
+```

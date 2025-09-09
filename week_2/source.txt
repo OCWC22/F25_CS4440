@@ -1,0 +1,4 @@
+Hello WORLD!
+This is a TEST of the PIPE system.
+Converting UPPERCASE to lowercase.
+IPC IS COOL!

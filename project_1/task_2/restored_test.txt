@@ -1,3 +1,0 @@
-hello world
-aaaabbbb     ccccc
-1111111111111111

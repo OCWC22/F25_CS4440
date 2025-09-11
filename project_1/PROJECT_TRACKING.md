@@ -4,7 +4,8 @@
 This file tracks all questions, problems, and solutions for CS4440 Project 1: File Compression with Processes and Threads.
 
 **Due Date:** September 28, 2025  
-**Status:** Complete - All 10 Tasks Implemented and Tested
+**Status:** Complete - All 10 Tasks Implemented and Tested  
+**Organization:** Code organized into task folders (task_1/ through task_10/) with README files
 
 ---
 
@@ -12,15 +13,15 @@ This file tracks all questions, problems, and solutions for CS4440 Project 1: Fi
 
 | Task # | Description | Status | Files | Output |
 |--------|-------------|--------|-------|--------|
-| 1 | Basic Compression Program | ✅ Complete | [MyCompress.c](./MyCompress.c) | [outputs/test_output.cmp](./outputs/test_output.cmp) |
-| 2 | Basic Decompression Program | ✅ Complete | [MyDecompress.c](./MyDecompress.c) | [outputs/restored_test.txt](./outputs/restored_test.txt) |
-| 3 | Fork-based Compression | ✅ Complete | [ForkCompress.c](./ForkCompress.c) | [outputs/fork_test.cmp](./outputs/fork_test.cmp) |
-| 4 | Pipe-based Compression | ✅ Complete | [PipeCompress.c](./PipeCompress.c) | [outputs/pipe.cmp](./outputs/pipe.cmp) |
-| 5 | Parallel Fork Compression | ✅ Complete | [ParFork.c](./ParFork.c) | [outputs/parfork_2.cmp](./outputs/parfork_2.cmp) |
-| 6 | Minimal Shell | ✅ Complete | [MinShell.c](./MinShell.c) | Interactive |
-| 7 | Enhanced Shell | ✅ Complete | [MoreShell.c](./MoreShell.c) | Interactive |
-| 8 | Shell with Pipes | ✅ Complete | [DupShell.c](./DupShell.c) | Interactive |
-| 9 | Thread-based Compression | ✅ Complete | [ParThread.c](./ParThread.c) | [outputs/thread.cmp](./outputs/thread.cmp) |
+| 1 | Basic Compression Program | ✅ Complete | [task_1/MyCompress.c](./task_1/MyCompress.c) | [task_1/test_output.cmp](./task_1/test_output.cmp) |
+| 2 | Basic Decompression Program | ✅ Complete | [task_2/MyDecompress.c](./task_2/MyDecompress.c) | [task_2/restored_test.txt](./task_2/restored_test.txt) |
+| 3 | Fork-based Compression | ✅ Complete | [task_3/ForkCompress.c](./task_3/ForkCompress.c) | [task_3/fork_test.cmp](./task_3/fork_test.cmp) |
+| 4 | Pipe-based Compression | ✅ Complete | [task_4/PipeCompress.c](./task_4/PipeCompress.c) | [task_4/pipe.cmp](./task_4/pipe.cmp) |
+| 5 | Parallel Fork Compression | ✅ Complete | [task_5/ParFork.c](./task_5/ParFork.c) | [task_5/parfork_2.cmp](./task_5/parfork_2.cmp) |
+| 6 | Minimal Shell | ✅ Complete | [task_6/MinShell.c](./task_6/MinShell.c) | Interactive |
+| 7 | Enhanced Shell | ✅ Complete | [task_7/MoreShell.c](./task_7/MoreShell.c) | Interactive |
+| 8 | Shell with Pipes | ✅ Complete | [task_8/DupShell.c](./task_8/DupShell.c) | Interactive |
+| 9 | Thread-based Compression | ✅ Complete | [task_9/ParThread.c](./task_9/ParThread.c) | [task_9/parthread_test.cmp](./task_9/parthread_test.cmp) |
 | 10 | Performance Analysis | ✅ Complete | N/A | [See results below](#task-10-performance-analysis) |
 
 ---
@@ -313,50 +314,36 @@ time ./ParThread 4 large_test.txt outputs/thread.cmp
 
 ---
 
-## Output Directory
+## Output Files Organization
 
-All compressed and restored files are stored in the [`outputs/`](./outputs/) directory:
+All compressed and restored files are now organized in their respective task folders:
 
-- **test_output.cmp** - Compressed output from MyCompress
-- **restored_test.txt** - Decompressed file from MyDecompress
-- **fork_test.cmp** - Compressed output from ForkCompress
-- **pipe.cmp** - Compressed output from PipeCompress
-- **parfork_2.cmp** - Compressed output from ParFork (2 processes)
-- **parfork_4.cmp** - Compressed output from ParFork (4 processes)
-- **thread.cmp** - Compressed output from ParThread
-- **sequential.cmp** - Sequential compression for performance testing
-- **show.cmp** - Additional compressed file
-- **restored_fork.txt** - Restored file from fork compression
-- **restored_show.txt** - Restored file from basic compression
+- **task_1/**: `test_output.cmp`, `show.cmp`, `compressed.txt`
+- **task_2/**: `restored_test.txt`, `restored_show.txt`
+- **task_3/**: `fork_test.cmp`, `fork_out.cmp`, `restored_fork.txt`
+- **task_4/**: `pipe.cmp`, `pipe_test.cmp`
+- **task_5/**: `parfork_2.cmp`, `parfork_4.cmp`, `parfork_test.cmp`
+- **task_9/**: `parthread_test.cmp`
+- **task_10/**: `sequential.cmp` (for performance testing)
 
 ---
 
 ## Compilation Commands
 
 ```bash
-# Task 1: Basic Compression
-gcc MyCompress.c -o MyCompress
-
-# Task 2: Basic Decompression  
-gcc MyDecompress.c -o MyDecompress
-
-# Task 3: Fork-based Compression
-gcc ForkCompress.c -o ForkCompress
-
-# Task 4: Pipe-based Compression
-gcc PipeCompress.c -o PipeCompress
-
-# Task 5: Parallel Fork Compression
-gcc ParFork.c -o ParFork
-
-# Tasks 6-8: Shell programs
-gcc MinShell.c -o MinShell
-gcc MoreShell.c -o MoreShell
-gcc DupShell.c -o DupShell
-
-# Task 9: Thread-based Compression
-gcc ParThread.c -o ParThread -lpthread
+# Navigate to task folders and compile:
+cd task_1 && gcc MyCompress.c -o MyCompress
+cd task_2 && gcc MyDecompress.c -o MyDecompress
+cd task_3 && gcc ForkCompress.c -o ForkCompress
+cd task_4 && gcc PipeCompress.c -o PipeCompress
+cd task_5 && gcc ParFork.c -o ParFork
+cd task_6 && gcc MinShell.c -o MinShell
+cd task_7 && gcc MoreShell.c -o MoreShell
+cd task_8 && gcc DupShell.c -o DupShell
+cd task_9 && gcc ParThread.c -o ParThread -lpthread
 ```
+
+See individual task README files for detailed instructions.
 
 ---
 
@@ -364,34 +351,34 @@ gcc ParThread.c -o ParThread -lpthread
 
 ```bash
 # Test Task 1 & 2 (Compression/Decompression cycle)
-./MyCompress sample.txt outputs/test_output.cmp
-./MyDecompress outputs/test_output.cmp outputs/restored_test.txt
+cd task_1 && ./MyCompress sample.txt test_output.cmp
+cd task_2 && ./MyDecompress ../task_1/test_output.cmp restored_test.txt
+
+# Test Task 3 (Fork-based compression)
+cd task_3 && ./ForkCompress sample_fork.txt fork_test.cmp
 
 # Test Task 4 (Pipe-based compression)
-./PipeCompress sample.txt outputs/pipe.cmp
+cd task_4 && ./PipeCompress ../task_1/sample.txt pipe.cmp
 
 # Test Task 5 (Parallel fork compression)
-./ParFork 2 large_test.txt outputs/parfork_2.cmp
-./ParFork 4 large_test.txt outputs/parfork_4.cmp
+cd task_5 && ./ParFork 2 ../task_10/large_test.txt parfork_2.cmp
 
 # Test Tasks 6-8 (Shell programs - interactive)
-./MinShell
-./MoreShell  
-./DupShell
+cd task_6 && ./MinShell
+cd task_7 && ./MoreShell  
+cd task_8 && ./DupShell
 
 # Test Task 9 (Thread-based compression)
-./ParThread 4 large_test.txt outputs/thread.cmp
+cd task_9 && ./ParThread 4 ../task_10/large_test.txt parthread_test.cmp
 
 # Test Task 10 (Performance analysis)
-time ./MyCompress large_test.txt outputs/sequential.cmp
-time ./PipeCompress large_test.txt outputs/pipe.cmp
-time ./ParFork 2 large_test.txt outputs/parfork_2.cmp
-time ./ParFork 4 large_test.txt outputs/parfork_4.cmp
-time ./ParThread 4 large_test.txt outputs/thread.cmp
+cd task_10 && time ../task_1/MyCompress large_test.txt sequential.cmp
 
 # Verify outputs match originals
-diff sample.txt outputs/restored_test.txt
+cd task_2 && diff ../task_1/sample.txt restored_test.txt
 ```
+
+See individual task README files for detailed testing instructions.
 
 ---
 

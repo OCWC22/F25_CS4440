@@ -635,40 +635,288 @@ Every app, every click, every message - it's all just billions of tiny yes/no de
 
 **Where Math Actually Happens**:
 
+The ALU is the brain's math center. It doesn't just add numbers - it performs ALL calculations and logical operations using nothing but logic gates.
+
 ```
-ALU: The Math Engine
+ALU: The Complete Math Engine Built from Logic Gates
 ┌─────────────────────────────────────────────────────────────┐
-│ Input A: 32-bit number (e.g., 5)                           │
-│ Input B: 32-bit number (e.g., 3)                           │
-│ Operation: ADD, SUB, MUL, DIV, AND, OR, etc.               │
-│ Output: Result (e.g., 8)                                    │
-│ Flags: Zero, Carry, Overflow (for error checking)           │
+│ Input A: 32-bit number (e.g., 5 = 00000000000000000000000000000101) │
+│ Input B: 32-bit number (e.g., 3 = 00000000000000000000000000000011) │
+│ Operation Control: 4-bit code telling ALU what to do       │
+│   0000 = ADD, 0001 = SUB, 0010 = AND, 0011 = OR, etc.     │
+│ Output: 32-bit result (e.g., 8 = 00000000000000000000000000001000) │
+│ Status Flags: Zero, Carry, Overflow, Sign (crucial!)      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Your Code → ALU Operations**:
+#### Why Status Flags? The Secret to Error-Free Computing
+
+**1. Zero Flag (ZF)**: Sets to 1 when result is exactly 0
+- **Why**: To check if things are equal, if counts reached zero, if searches found nothing
+- **Real use**: `if (result == 0)` in C becomes `JZ` (Jump if Zero) in assembly
+
+**2. Carry Flag (CF)**: Sets when math "carries over" beyond 32 bits
+- **Why**: To detect overflow in unsigned math
+- **Example**: 255 + 1 = 256, but 8 bits can only hold 255!
+  - Binary: 11111111 + 00000001 = (1)00000000
+  - The (1) is the carry - stored in CF flag
+
+**3. Overflow Flag (OF)**: Sets when signed math goes wrong
+- **Why**: Positive + Positive = Negative? That's an error!
+- **Example**: 127 + 1 = 128, but in signed 8-bit, 128 is -1!
+  - 01111111 (+127) + 00000001 = 10000000 (-128 in signed)
+  - OF flag sets to 1: "This result is wrong!"
+
+**4. Sign Flag (SF)**: Just copies the leftmost bit (1 = negative, 0 = positive)
+- **Why**: To know if result is negative without checking all bits
+
+#### ALU Built from Logic Gates - The Magic Revealed
+
+**How an ADDER is built from logic gates**:
+```
+Half Adder (adds 1 bit):
+Sum = A XOR B
+Carry = A AND B
+
+Full Adder (adds 3 bits including carry):
+Sum = A XOR B XOR CarryIn
+CarryOut = (A AND B) OR (CarryIn AND (A XOR B))
+
+32-Bit Adder = 32 Full Adders chained together!
+Each bit position: Result[i] = A[i] + B[i] + Carry[i-1]
+```
+
+**Your C Code → ALU Operations → Assembly**:
+
+**C Code**:
 ```c
-int result = a + b;  // ALU performs ADD operation
-if (result == 0) {   // ALU sets Zero flag
-    // This branch executes because Zero flag is set
+int a = 5;
+int b = 3;
+int result = a + b;          // Simple addition
+if (result > 10) {           // Comparison
+    result = result * 2;     // Multiplication
 }
 ```
+
+**What the CPU Actually Sees (x86 Assembly)**:
+```assembly
+MOV EAX, [a]          ; Load a into EAX register
+ADD EAX, [b]          ; ALU adds: EAX = EAX + b
+CMP EAX, 10           ; ALU compares: EAX - 10 (sets flags)
+JLE skip_multiply     ; Jump if Less or Equal (if Zero or Sign flag set)
+SHL EAX, 1           ; Shift left = multiply by 2 (using logic gates)
+skip_multiply:
+MOV [result], EAX    ; Store result
+```
+
+**The ALU Operations Step-by-Step**:
+1. `ADD EAX, [b]`: ALU gets inputs 5 and 3, performs addition
+   - Result: 8 (00001000 in binary)
+   - ZF = 0 (not zero)
+   - CF = 0 (no carry)
+   - OF = 0 (no overflow)
+
+2. `CMP EAX, 10`: ALU subtracts 10 from 8
+   - Result: -2 (11111110 in binary)
+   - ZF = 0 (not zero)
+   - SF = 1 (result is negative)
+   - OF = 0 (no overflow)
+
+3. `JLE skip_multiply`: CPU checks flags - SF=1 means result ≤ 10
+   - Jump is taken, multiplication is skipped
+
+#### From Logic Gates to Every Math Operation
+
+**Subtraction**: A - B = A + (-B) = A + (NOT B + 1)
+- Uses adder + NOT gates + carry logic
+
+**Multiplication**: Repeated addition with shifting
+- 5 × 3 = 5 + 5 + 5 (done efficiently with bit shifts)
+
+**Division**: Repeated subtraction
+- 15 ÷ 3 = How many times can I subtract 3 from 15?
+
+**Logical Operations**: Direct gate implementations
+- AND: 32 AND gates working in parallel
+- OR: 32 OR gates working in parallel
+- XOR: 32 XOR gates working in parallel
+- NOT: 32 NOT gates working in parallel
 
 ### Level 3: CPU Registers - The Ultra-Fast Memory
 
 **The Closest Memory to the Action**:
 
+Registers are the CPU's personal workspace - like scratch pads sitting right next to the ALU. When data is in registers, the CPU can access it instantly (1 clock cycle).
+
 ```
-CPU Registers: Speed of Light Storage
+CPU Registers: The CPU's Personal Workspace
 ┌─────────────────────────────────────────────────────────────┐
-│ General Purpose: RAX, RBX, RCX, RDX (64-bit values)        │
-│ Instruction Pointer: RIP (where to execute next)            │
-│ Stack Pointer: RSP (top of the stack)                       │
-│ Flags: RFLAGS (ALU results: zero, carry, etc.)               │
+│ General Purpose:                                            │
+│   RAX, RBX, RCX, RDX - 64-bit values for math & data      │
+│   RSI, RDI - Source & Destination indices                  │
+│   RBP, RSP - Base & Stack pointers                         │
+│   R8-R15 - Additional general registers                    │
+│                                                            │
+│ Special Purpose:                                           │
+│ RIP: Instruction Pointer (WHERE to execute next)          │
+│ RSP: Stack Pointer (top of the call stack)                │
+│ RFLAGS: Status flags (ALU results: ZF, CF, OF, SF)       │
+│ CR0-CR4: Control registers (CPU configuration)            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Why This Matters**: Registers are 100-1000x faster than RAM. When your variables are in registers, your code runs at maximum speed. This is why compiler optimization is so important.
+#### Register Anatomy: 64-bit Power
+
+Modern registers are 64-bit, but can be accessed in smaller chunks:
+
+```
+RAX (64-bit):
+┌────────┬────────┬────────┬────────┬────────┬────────┬────────┬────────┐
+│  63-56  │  55-48  │  47-40  │  39-32  │  31-24  │  23-16  │  15-8   │  7-0    │
+└────────┴────────┴────────┴────────┴────────┴────────┴────────┴────────┘
+    AH        AL        RAX (32-bit)        EAX (16-bit)      AX (8-bit)
+```
+
+**Why 64-bit?**: Can represent numbers from 0 to 18,446,744,073,709,551,615!
+That's 18 quintillion - enough to count every grain of sand on Earth 100 times.
+
+#### The Critical Role of Each Register
+
+**RAX: The Primary Accumulator**
+- First choice for math operations
+- Return value for function calls
+- Example: `ADD RAX, RBX` adds RBX to RAX
+
+**RCX: The Counter**
+- Loop counter (REP prefix instructions)
+- Shift/rotate count
+- Example: `MOV RCX, 1000` then `REP STOSB` repeats 1000 times
+
+**RSP: Stack Pointer**
+- Points to top of stack (grows downward)
+- Crucial for function calls: `PUSH RBP` decrements RSP
+- Local variables live below RSP
+
+**RIP: Instruction Pointer**
+- ALWAYS points to next instruction to execute
+- You cannot directly modify RIP (except with jumps/calls)
+- Example: `JMP label` changes RIP to point to `label`
+
+#### From Python to Machine Code: The Complete Journey
+
+Let's trace a simple operation through all layers:
+
+**1. Python Code (High Level)**:
+```python
+def add_numbers(a, b):
+    result = a + b
+    return result
+
+print(add_numbers(5, 3))
+```
+
+**2. C Code (System Level)**:
+```c
+// Python interpreter is written in C
+PyObject* add_numbers(PyObject* self, PyObject* args) {
+    int a, b, result;
+
+    // Parse arguments from Python
+    PyArg_ParseTuple(args, "ii", &a, &b);
+
+    // The actual addition
+    result = a + b;  // This becomes machine code!
+
+    // Return result to Python
+    return PyLong_FromLong(result);
+}
+```
+
+**3. Assembly Code (Human-readable Machine Code)**:
+```assembly
+add_numbers:
+    push    rbp             ; Save base pointer
+    mov     rbp, rsp        ; Set up new stack frame
+    sub     rsp, 16         ; Space for local variables
+
+    ; Get arguments from stack
+    mov     eax, [rbp+16]   ; Get a
+    add     eax, [rbp+24]   ; Add b (ALU operation!)
+    mov     [rbp-4], eax   ; Store result
+
+    ; Return the result
+    mov     eax, [rbp-4]   ; Load result into RAX
+    leave                   ; Restore stack
+    ret                     ; Return to caller
+```
+
+**4. Machine Code (What CPU Actually Executes)**:
+```
+55                      push   rbp
+48 89 e5                mov    rbp,rsp
+48 83 ec 10             sub    rsp,0x10
+8b 45 10                mov    eax,[rbp+0x10]
+03 45 18                add    eax,[rbp+0x18]
+89 45 fc                mov    [rbp-0x4],eax
+8b 45 fc                mov    eax,[rbp-0x4]
+c9                      leave
+c3                      ret
+```
+
+**Each hex byte is a machine instruction**:
+- `55` = PUSH RBP
+- `48 89 e5` = MOV RBP, RSP
+- `03 45 18` = ADD EAX, [RBP+24]
+- etc.
+
+#### How the CPU Executes These Instructions
+
+**Fetch-Decode-Execute Cycle (Billions of times per second)**:
+
+1. **Fetch**: CPU reads instruction from memory address in RIP
+2. **Decode**: Control unit figures out what the instruction does
+3. **Execute**: ALU and registers perform the operation
+4. **Writeback**: Results stored back in registers or memory
+5. **Update**: RIP incremented to point to next instruction
+
+**Real Example**:
+```
+Initial state:
+RIP = 0x1000 (pointing to our code)
+Memory[0x1000] = 0x034518 (ADD EAX, [RBP+24])
+
+Step 1: Fetch
+CPU reads 0x034518 from memory location 0x1000
+
+Step 2: Decode
+Control unit recognizes this as:
+Operation: ADD (03)
+Destination: EAX (45)
+Source: [RBP+24] (18 with displacement)
+
+Step 3: Execute
+ALU gets:
+- Input A: Current EAX value (say 5)
+- Input B: Value at memory address RBP+24 (say 3)
+- Operation: ADD
+- Result: 8
+- Flags: ZF=0, CF=0, OF=0, SF=0
+
+Step 4: Writeback
+Result (8) stored in EAX register
+
+Step 5: Update
+RIP = RIP + 3 (instruction was 3 bytes)
+Now RIP points to next instruction
+```
+
+**Why This Matters for Performance**:
+- **Register access**: 1 cycle
+- **L1 cache**: 4 cycles
+- **RAM**: 200 cycles
+- **SSD**: 100,000 cycles
+
+When your compiler keeps variables in registers instead of RAM, your code runs 200x faster! This is why optimized C++ code beats Python for performance - better register usage.
 
 ### Level 4: CPU Cache - The Memory Hierarchy
 

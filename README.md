@@ -62,3 +62,90 @@ Week 12: Security and Protection
 Week 13: Virtual Machines
 Week 14: Distributed Systems
 Week 15: Final Review
+
+## Building and Running C/C++ Code
+
+This repository contains various C/C++ programs for learning operating systems concepts.
+
+### Project 1: File Compression
+
+Navigate to project_1 and run:
+
+```bash
+make all
+```
+
+This compiles all C programs for the file compression tasks (Tasks 1-9).
+
+#### Task 1: Sequential Compression
+```bash
+cd project_1/task_1
+./MyCompress sample.txt test_output.cmp
+```
+
+#### Task 2: Decompression
+```bash
+cd project_1/task_2
+./MyDecompress ../task_1/test_output.cmp restored_test.txt
+```
+
+#### Task 3: Fork-based Compression
+```bash
+cd project_1/task_3
+./ForkCompress sample_fork.txt fork_test.cmp
+```
+
+#### Task 4: Pipe-based Compression
+```bash
+cd project_1/task_4
+./PipeCompress ../task_1/sample.txt pipe.cmp
+```
+
+#### Task 5: Parallel Fork Compression
+```bash
+cd project_1/task_5
+./ParFork 2 ../task_10/large_test.txt parfork_2.cmp
+./ParFork 4 ../task_10/large_test.txt parfork_4.cmp
+```
+
+#### Task 6: Minimal Shell
+```bash
+cd project_1/task_6
+./MinShell
+# Type commands like 'ls', 'pwd', then 'exit' to quit
+```
+
+#### Task 7: Enhanced Shell
+```bash
+cd project_1/task_7
+./MoreShell
+# Supports arguments, e.g., 'ls -l', 'echo hello world'
+```
+
+#### Task 8: Shell with Pipes
+```bash
+cd project_1/task_8
+./DupShell
+# Supports pipes, e.g., 'ls -l | wc'
+```
+
+#### Task 9: Thread-based Compression
+```bash
+cd project_1/task_9
+./ParThread 4 ../task_10/large_test.txt parthread_test.cmp
+```
+
+#### Task 10: Performance Analysis
+```bash
+cd project_1/task_10
+time ../task_1/MyCompress large_test.txt sequential.cmp
+time ../task_4/PipeCompress large_test.txt ../task_4/pipe.cmp
+time ../task_5/ParFork 2 large_test.txt ../task_5/parfork_2.cmp
+time ../task_9/ParThread 4 large_test.txt ../task_9/parthread_test.cmp
+```
+
+### Other Projects
+
+For code in other directories (e.g., week_1, week_2, src/), refer to their respective directories and README.md files for build instructions.
+
+To run specific programs, follow the usage examples in each task's README.md.

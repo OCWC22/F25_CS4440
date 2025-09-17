@@ -12,33 +12,39 @@ typedef struct {
     long start;
     long size;
     long bytes_written;
+    pthread_mutex_t* file_mutex;
+    pthread_mutex_t* output_mutex;
 } thread_args_t;
 
 void* compress_chunk_thread(void *args) {
     thread_args_t *t_args = (thread_args_t*)args;
-    
+
+    // Use mutex to protect file access
+    pthread_mutex_lock(t_args->file_mutex);
     FILE *source = fopen(t_args->in_file, "r");
+    pthread_mutex_unlock(t_args->file_mutex);
+
     if (!source) {
         perror("Failed to open input file");
         t_args->out_buffer = NULL;
         t_args->bytes_written = 0;
         return NULL;
     }
-    
+
     fseek(source, t_args->start, SEEK_SET);
 
-    // Allocate a generous buffer for compressed output
-    char* buffer = malloc(t_args->size * 4); 
+    // Allocate a reasonable buffer for compressed output
+    char* buffer = malloc(t_args->size * 2 + 100);
     if (!buffer) {
         fclose(source);
         t_args->out_buffer = NULL;
         t_args->bytes_written = 0;
         return NULL;
     }
-    
+
     t_args->out_buffer = buffer;
     char* buffer_ptr = buffer; // Keep track of current position
-    
+
     char prev_char = EOF;
     int count = 0;
     long bytes_read = 0;
@@ -49,14 +55,16 @@ void* compress_chunk_thread(void *args) {
         if (current_char == EOF) break;
         bytes_read++;
 
-        // Same compression logic as other implementations
+        // Improved compression logic with proper boundary handling
         if (current_char == ' ' || current_char == '\n') {
             if (count > 0) {
                 if (count >= 16) {
-                    int written = snprintf(buffer_ptr, t_args->size * 4 - total_bytes_written, 
+                    int written = snprintf(buffer_ptr, t_args->size * 2 - total_bytes_written + 100,
                                          "%c%d%c", (prev_char == '1' ? '+' : '-'), count, (prev_char == '1' ? '+' : '-'));
-                    buffer_ptr += written;
-                    total_bytes_written += written;
+                    if (written > 0) {
+                        buffer_ptr += written;
+                        total_bytes_written += written;
+                    }
                 } else {
                     for (int j = 0; j < count; j++) {
                         *buffer_ptr = prev_char;
@@ -72,7 +80,7 @@ void* compress_chunk_thread(void *args) {
             prev_char = EOF;
             continue;
         }
-        
+
         if (prev_char == EOF) {
             prev_char = current_char;
             count = 1;
@@ -81,10 +89,12 @@ void* compress_chunk_thread(void *args) {
         } else {
             if (count > 0) {
                 if (count >= 16) {
-                    int written = snprintf(buffer_ptr, t_args->size * 4 - total_bytes_written, 
+                    int written = snprintf(buffer_ptr, t_args->size * 2 - total_bytes_written + 100,
                                          "%c%d%c", (prev_char == '1' ? '+' : '-'), count, (prev_char == '1' ? '+' : '-'));
-                    buffer_ptr += written;
-                    total_bytes_written += written;
+                    if (written > 0) {
+                        buffer_ptr += written;
+                        total_bytes_written += written;
+                    }
                 } else {
                     for (int j = 0; j < count; j++) {
                         *buffer_ptr = prev_char;
@@ -97,14 +107,16 @@ void* compress_chunk_thread(void *args) {
             count = 1;
         }
     }
-    
-    // Handle any remaining sequence at the end
+
+    // Handle any remaining sequence at the end of chunk
     if (count > 0) {
         if (count >= 16) {
-            int written = snprintf(buffer_ptr, t_args->size * 4 - total_bytes_written, 
+            int written = snprintf(buffer_ptr, t_args->size * 2 - total_bytes_written + 100,
                                  "%c%d%c", (prev_char == '1' ? '+' : '-'), count, (prev_char == '1' ? '+' : '-'));
-            buffer_ptr += written;
-            total_bytes_written += written;
+            if (written > 0) {
+                buffer_ptr += written;
+                total_bytes_written += written;
+            }
         } else {
             for (int j = 0; j < count; j++) {
                 *buffer_ptr = prev_char;
@@ -113,10 +125,8 @@ void* compress_chunk_thread(void *args) {
             }
         }
     }
-    
-    *buffer_ptr = '\0'; // Null-terminate the string buffer
-    t_args->bytes_written = total_bytes_written;
 
+    t_args->bytes_written = total_bytes_written;
     fclose(source);
     return NULL;
 }
@@ -141,9 +151,13 @@ int main(int argc, char *argv[]) {
         perror("Failed to get file size");
         return 1;
     }
-    
+
     long file_size = st.st_size;
     long chunk_size = file_size / n_threads;
+
+    // Initialize mutexes for thread synchronization
+    pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t output_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     pthread_t threads[n_threads];
     thread_args_t args[n_threads];
@@ -155,7 +169,9 @@ int main(int argc, char *argv[]) {
         args[i].size = (i == n_threads - 1) ? (file_size - args[i].start) : chunk_size;
         args[i].out_buffer = NULL;
         args[i].bytes_written = 0;
-        
+        args[i].file_mutex = &file_mutex;
+        args[i].output_mutex = &output_mutex;
+
         int result = pthread_create(&threads[i], NULL, compress_chunk_thread, &args[i]);
         if (result != 0) {
             fprintf(stderr, "Failed to create thread %d\n", i);
@@ -173,17 +189,23 @@ int main(int argc, char *argv[]) {
     // Wait for all threads to complete and write their results
     for (int i = 0; i < n_threads; i++) {
         pthread_join(threads[i], NULL);
-        
+
         if (args[i].out_buffer && args[i].bytes_written > 0) {
+            pthread_mutex_lock(&output_mutex);
             fwrite(args[i].out_buffer, 1, args[i].bytes_written, final_dest);
+            pthread_mutex_unlock(&output_mutex);
         }
-        
+
         if (args[i].out_buffer) {
             free(args[i].out_buffer);
         }
     }
-    
+
     fclose(final_dest);
+
+    // Clean up mutexes
+    pthread_mutex_destroy(&file_mutex);
+    pthread_mutex_destroy(&output_mutex);
 
     printf("Threaded compression complete with %d threads.\n", n_threads);
     return 0;

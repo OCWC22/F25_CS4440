@@ -1,5 +1,16 @@
 # The Complete AI Inference Pipeline: From Your Code to Customer's Screens
 
+## Project 1 — Purpose & Outcomes
+
+**What you'll accomplish:** Map one real-life request end-to-end across **Computer Organization**, **Operating Systems**, and **Data Structures & Algorithms**.
+
+**Choose a single running scenario:** e.g., *user clicks "Buy Now"*. We'll revisit this at every layer.
+
+**Learning outcomes (you can check off):**
+- Explain how your **data structure choice** changes cache behavior and paging.
+- Predict how the **OS scheduler** affects latency/throughput of your code path.
+- Trace your code from **source → assembly → instructions → micro-ops** and back to algorithmic trade-offs.
+
 ## Executive Summary
 
 Imagine you're building the next ChatGPT. Your code needs to process thousands of customer requests simultaneously, run massive AI models, and deliver responses in milliseconds. This is the story of how your C++ code becomes AI magic - from the operating system fundamentals you learn in CS4440 to the cutting-edge AI inference systems powering today's most exciting applications.
@@ -1842,9 +1853,185 @@ Multi-Core Architecture
 
 **The Magic**: Each core can run a different thread from your program simultaneously. This is how your 4-thread ParThread.c can actually work in parallel.
 
-### Level 7: From C++ to Machine Code - The Translation Process
 
-**How Your Code Becomes Machine Instructions**:
+## Operating System Primitives
+
+### Processes vs Threads
+- **Abstractions**: Processes have isolated address spaces; threads share memory within a process
+- **Hardware impact**: Context switches save/restore registers, flush caches (cost: 10,000+ cycles)
+- **Algorithm implications**: Thread safety, contention, false sharing, work stealing
+
+```cpp
+// Example: Creating a thread (OS manages this)
+pthread_t thread;
+pthread_create(&thread, NULL, process_order, &order_data);
+// OS allocates new stack, sets up registers, schedules on core
+```
+
+### Scheduling (Round Robin, Priority, CFS)
+- **How it works**: OS scheduler picks which thread runs on which core
+- **Time quantum**: Typically 10ms; preemption interrupts running threads
+- **Algorithm implications**:
+  - Batch vs interactive workloads need different scheduling
+  - Latency-sensitive tasks need priority boosts
+  - Cache affinity matters for performance
+
+```cpp
+// What scheduler sees:
+Thread A: running for 8ms (needs 2ms more)
+Thread B: high priority, just woke up
+Thread C: same core as A last time (cache warm)
+
+// Scheduler decision: Preempt A, run B, then A on same core
+```
+
+### Virtual Memory & Paging
+- **Pages**: 4KB blocks of memory (modern: 2MB/1GB huge pages)
+- **TLB**: Translation Lookaside Buffer - caches virtual→physical mappings
+- **Page faults**: When accessed page isn't in memory (trap to OS)
+- **DS implications**: Arrays vs pointers, graph/page locality, blocked layouts
+
+```cpp
+// Array traversal: sequential pages = TLB friendly
+for (int i = 0; i < 1000000; i++) {
+    sum += array[i];  // Predictable page access
+}
+
+// Linked list: random pages = TLB misses
+while (node) {
+    sum += node->value;  // Each node could be on different page
+}
+```
+
+### Syscalls & IO
+- **User ↔ kernel transition**: Trap instruction switches to kernel mode
+- **Buffers**: Data copied between user and kernel space
+- **Async vs sync**: Non-blocking IO enables better resource utilization
+- **Algorithm implications**: Backpressure, queues/rings, batching
+
+```cpp
+// Simple write becomes syscall
+write(socket_fd, buffer, size);  // Trap to kernel
+// Kernel copies buffer, sends to network, returns to user
+```
+
+### Level 8: Memory Management - The RAM Story
+
+**How Your Variables Actually Live in Memory**:
+
+```
+Memory Layout of Your Running Program
+┌─────────────────────────────────────────────────────────────┐
+│ Stack: Local variables, function calls (grows down)         │
+│ Heap: Dynamic allocation (malloc, new) (grows up)          │
+│ Data: Global variables, static variables                    │
+│ Code: Your compiled instructions (read-only)                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Virtual Memory Magic**: Each process thinks it has 4GB of memory all to itself. The OS maps this to physical RAM pages. This is why multiple programs can run without interfering with each other.
+
+*See also: Intersections Case C (Graph traversal) for TLB/page locality impacts.*
+
+## Data Structures & Algorithms on Real Hardware
+
+### Arrays vs Linked Lists
+**Cache behavior determines real-world performance**:
+
+```cpp
+// Array: Sequential memory = cache friendly
+int array[1000000];
+for (int i = 0; i < 1000000; i++) {
+    sum += array[i];  // Prefetcher works perfectly
+}
+// L1 hit rate: ~95% (one cache line serves 16 elements)
+```
+
+```cpp
+// Linked list: Random memory = cache hostile
+struct Node { int value; Node* next; };
+Node* node = head;
+while (node) {
+    sum += node->value;  // Each node = new cache line
+    node = node->next;
+}
+// L1 hit rate: ~5% (pointer chasing kills prefetcher)
+```
+
+**Hardware impact**: Array traversal: 0.5ns/element; List traversal: 10ns/element
+
+### Hash Tables
+**Load factor affects cache behavior**:
+
+```cpp
+// Open addressing: Linear probing
+// Pros: Cache friendly (sequential search)
+// Cons: Clustering degrades performance
+int table[SIZE];
+int hash = key % SIZE;
+while (table[hash] != EMPTY) {
+    hash = (hash + 1) % SIZE;  // Sequential = good for cache
+}
+```
+
+```cpp
+// Chaining: Separate lists
+// Pros: No clustering
+// Cons: Pointer chasing = cache misses
+struct Entry { int key; int value; Entry* next; };
+Entry* table[SIZE];
+Entry* entry = table[key % SIZE];
+while (entry) {
+    if (entry->key == key) return entry->value;
+    entry = entry->next;  // Cache miss!
+}
+```
+
+### Trees / Heaps / Tries
+**Memory layout matters more than algorithmic complexity**:
+
+```cpp
+// Array-based tree (B-tree for disks)
+// Nodes fit in cache lines; sequential access
+struct BTreeNode {
+    int keys[15];  // Fits in one cache line
+    int64_t children[16];
+};
+```
+
+```cpp
+// Pointer-based tree
+// Poor cache locality; branch prediction issues
+struct BinaryNode {
+    int key;
+    BinaryNode* left;
+    BinaryNode* right;
+    // Each node access = potential cache miss
+};
+```
+
+### Queues/Stacks & Concurrency
+**Lock design affects hardware behavior**:
+
+```cpp
+// Simple mutex queue
+std::queue<int> q;
+std::mutex m;
+// Contention causes cache coherence traffic
+// Lock acquisition/release = memory barriers
+```
+
+```cpp
+// Lock-free ring buffer
+char buffer[1024];  // Power-of-2 size
+std::atomic<int> head{0}, tail{0};
+// No locks = no contention
+// But needs memory ordering = CPU pipeline stalls
+```
+
+## From C++/Python to Machine Code
+
+**Toolchain you must mentally model while choosing DS&A**:
 
 ```
 Compilation Journey: Human Readable → Machine Executable
@@ -1866,21 +2053,25 @@ Compilation Journey: Human Readable → Machine Executable
 4. **Loader** puts the executable in memory when you run it
 5. **CPU** fetches, decodes, and executes the instructions
 
-### Level 8: Memory Management - The RAM Story
-
-**How Your Variables Actually Live in Memory**:
-
+**Example: Buy Now scenario**:
+```python
+# Python
+print("Processing order...")
 ```
-Memory Layout of Your Running Program
-┌─────────────────────────────────────────────────────────────┐
-│ Stack: Local variables, function calls (grows down)         │
-│ Heap: Dynamic allocation (malloc, new) (grows up)          │
-│ Data: Global variables, static variables                    │
-│ Code: Your compiled instructions (read-only)                │
-└─────────────────────────────────────────────────────────────┘
+Becomes:
+```c
+// C (Python interpreter)
+PyObject* PrintFunction(PyObject* self, PyObject* args) {
+    printf("Processing order...\n");  // syscall!
+    return Py_None;
+}
 ```
-
-**Virtual Memory Magic**: Each process thinks it has 4GB of memory all to itself. The OS maps this to physical RAM pages. This is why multiple programs can run without interfering with each other.
+Which compiles to:
+```assembly
+; x86-64
+mov rdi, [rip+format_string]
+call puts  ; Library function → syscall
+```
 
 ### Level 9: Threading in Hardware - The Truth About Parallelism
 
@@ -1905,74 +2096,217 @@ Threading: Hardware Perspective
 
 **The Reality Check**: True parallelism only happens when you have multiple cores. On a single-core CPU, threads just take turns (time-slicing). This is why multi-core CPUs are essential for modern AI.
 
+*See also: Intersections Case B (Producer/Consumer) for scheduler and lock design impacts.*
+
+## Intersections — Org × OS × DS&A
+
+> Each case: **Problem → DS choice → OS behavior → Hardware effects → Code (10-15 lines) → What the cache/ALU sees**
+
+### Case A — Sorting Millions of Items
+
+**Problem**: E-commerce site needs to sort orders by timestamp for analytics
+
+**DS choice**: Array of structs vs struct of arrays
+```cpp
+// Bad: Array of structs (cache unfriendly)
+struct Order { int64_t timestamp; int32_t user_id; float amount; };
+Order orders[1000000];  // Each access = full cache line
+// Sorting: timestamp, user_id, amount all move together
+```
+
+```cpp
+// Good: Struct of arrays (cache friendly)
+struct Orders {
+    int64_t timestamps[1000000];  // Sequential access
+    int32_t user_ids[1000000];
+    float amounts[1000000];
+};
+// Quick sort touches timestamps only = 3x fewer cache misses
+```
+
+**OS behavior**: Prefetcher detects sequential pattern, NUMA allocation keeps data local
+
+**Hardware effects**:
+- Array of structs: 33% cache hit rate, 100ns/element
+- Struct of arrays: 95% cache hit rate, 2ns/element
+
+**What the cache sees**:
+```
+Array of structs: [ts0|id0|amt0][ts1|id1|amt1][ts2|id2|amt2]...
+Sorting: All three fields loaded but only timestamp used!
+
+Struct of arrays: [ts0|ts1|ts2|ts3|ts4|ts5|ts7|ts8]...
+Sorting: One cache line serves 8 timestamps!
+```
+
+### Case B — Producer/Consumer
+
+**Problem**: Web server handling "Buy Now" clicks at 10,000 requests/second
+
+**DS**: Lock-free MPMC ring buffer vs mutex queue
+```cpp
+// Lock-free ring (high performance)
+struct RingBuffer {
+    char data[1024];  // Power of 2
+    std::atomic<size_t> head{0}, tail{0};
+};
+bool push(const Order& order) {
+    size_t h = head.load(std::memory_order_relaxed);
+    size_t t = tail.load(std::memory_order_acquire);
+    if ((h + 1) % 1024 != t) {  // Check space
+        data[h] = order;
+        head.store((h + 1) % 1024, std::memory_order_release);
+        return true;
+    }
+    return false;
+}
+```
+
+**OS behavior**: No syscalls, no context switches, runs entirely in user space
+
+**Hardware effects**:
+- No cache coherence traffic (no locks bouncing between cores)
+- Predictable memory access pattern
+- CPU pipeline never stalls on memory barriers
+
+**What the ALU sees**:
+```
+Core 1 (producer): ADD, AND, STORE (no pipeline stalls)
+Core 2 (consumer): LOAD, ADD, AND (continuous stream)
+Result: 10M orders/second on 4 cores
+```
+
+### Case C — Graph Traversal (BFS for Recommendations)
+
+**Problem**: Find products frequently bought together from 10M purchase records
+
+**DS**: Adjacency list with blocked layout
+```cpp
+// Cache-friendly blocked layout
+struct Graph {
+    std::vector<int> nodes;  // Node offsets
+    std::vector<int> edges;  // All edges in blocks
+
+    // Process 64 edges at a time = one cache line
+    void bfs(int start) {
+        std::queue<int> q;
+        q.push(start);
+
+        while (!q.empty()) {
+            int node = q.front(); q.pop();
+            int start_idx = nodes[node];
+            int end_idx = nodes[node + 1];
+
+            // Process edges in cache-friendly blocks
+            for (int i = start_idx; i < end_idx; i += 64) {
+                // SIMD: Process 16 edges per instruction
+                __m512i edges = _mm512_load_si512(&edges[i]);
+                // Vectorized neighbor processing...
+            }
+        }
+    }
+};
+```
+
+**OS behavior**: TLB misses handled by 2MB huge pages, NUMA-aware allocation
+
+**Hardware effects**:
+- Blocked layout: 90% TLB hit rate
+- SIMD instructions: 16x throughput improvement
+- Prefetcher: Hides memory latency
+
+**What the cache sees**:
+```
+Traditional: [ptr|ptr|ptr|ptr|...] → Pointer chasing = cache miss
+Blocked:   [edge0|edge1|edge2|edge3|...] → Sequential = cache hit!
+```
+
 ### Level 10: GPU - The Parallel Processing Beast
 
-**NVIDIA H100: What 18,432 Cores Actually Means**:
+**NVIDIA H100: Latest Specs (2024)**:
 
 ```
-GPU Architecture: Designed for Massive Parallelism
+GPU Architecture: Hopper - AI Beast Mode
 ┌─────────────────────────────────────────────────────────────┐
-│ Streaming Multiprocessor (SM): 144 of these                │
-│ ├── CUDA Cores: 128 per SM (do basic math)                 │
-│ ├── Tensor Cores: 4 per SM (AI matrix operations)          │
-│ ├── Register File: 256KB per SM (ultra-fast storage)       │
-│ ├── Shared Memory: 228KB per SM (thread communication)     │
-│ └── L1 Cache: 256KB per SM (fast memory access)           │
+│ Streaming Multiprocessors (SM): 144 units                  │
+│ ├── CUDA Cores: 14,592 total (128 per SM)                  │
+│ ├── Tensor Cores: 576 total (4th gen, FP8 precision)       │
+│ ├── Register File: 256KB per SM                            │
+│ ├── Shared Memory: 228KB per SM                            │
+│ ├── L1 Cache: 256KB per SM                                │
+│ ├── L2 Cache: 50MB shared                                  │
+│ └── HBM3 Memory: 80GB @ 3.35TB/s bandwidth                │
+│                                                              │
+│ Performance:                                               │
+│ ├── FP8 Tensor: 3,958 TFLOPS (AI training)                │
+│ ├── FP16 Tensor: 1,979 TFLOPS (inference)                │
+│ ├── TF32 Tensor: 989 TFLOPS (traditional ML)               │
+│ └── NVLink: 900GB/s GPU-to-GPU (4th gen)                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **The GPU Difference**: While CPU cores are designed for fast sequential processing, GPU cores are designed for doing the same operation on thousands of data points simultaneously. This is perfect for AI matrix operations.
 
-### Level 11: The Complete AI Inference Pipeline - All Levels Connected
+**Why this matters to our cases**: GPU tiling/shared memory is the **DS layout counterpart** of CPU cache tiling; scheduling is SIMT rather than OS threads; move hot tiles to shared memory; coalesced loads reduce "pointer-chase" penalties seen in traditional graph traversals.
 
-**From Customer Request to Physics**:
+### Level 11: The Complete Pipeline - Revisited
 
-```
-Customer Types "Hello" → Complete Execution Chain
+**Replaying our Project-1 scenario (≤1 page timeline)**:
 
-Level 10: Customer Screen
-  ↓
-Level 9: Network Stack (TCP/IP, HTTP)
-  ↓
-Level 8: Your Application (C++ server code)
-  ↓
-Level 7: Operating System (process management)
-  ↓
-Level 6: CPU Cores (192 Graviton4 cores)
-  ↓
-Level 5: CPU Instructions (fetch/decode/execute)
-  ↓
-Level 4: Registers and Cache (L1/L2/L3)
-  ↓
-Level 3: ALU (mathematical operations)
-  ↓
-Level 2: Logic Gates (AND/OR/NOT implementation)
-  ↓
-Level 1: Transistors (electronic switches)
-  ↓
-Level 0: Physics (electrons flowing through silicon)
+1. **User clicks "Buy Now"** (event)
+   - Artifact: JavaScript click handler
+   - OS behavior: Interrupt handling, scheduler wakes
+   - Hardware effect: GPU composites pixels
 
-Meanwhile, for AI processing:
+2. **App logic processes order** (DS used)
+   - Artifact: Hash table lookup, queue push
+   - OS behavior: Process context, memory allocation
+   - Hardware effect: L1 cache hits on hot data
 
-Level 6: GPU Cores (18,432 CUDA cores)
-  ↓
-Level 5: CUDA Instructions (parallel operations)
-  ↓
-Level 4: GPU Memory (HBM3 - 3.35TB/s bandwidth)
-  ↓
-Level 3: Tensor Cores (matrix multiplication)
-  ↓
-Level 2: Parallel Logic Gates (thousands working together)
-  ↓
-Level 1: Billions of Transistors
-  ↓
-Level 0: Physics (massive parallel electron flow)
-```
+3. **Syscall to validate payment**
+   - Artifact: write()/send() system call
+   - OS behavior: Trap to kernel, copy to kernel buffer
+   - Hardware effect: TLB flush on mode switch
+
+4. **OS scheduler picks thread**
+   - Artifact: Run queue manipulation
+   - OS behavior: Context switch (save/restore registers)
+   - Hardware effect: Cache lines invalidated (10μs penalty)
+
+5. **Memory/TLB events**
+   - Artifact: Page table walk
+   - OS behavior: Page fault handler activation
+   - Hardware effect: TLB miss = 100 cycles stall
+
+6. **Cache lines touched**
+   - Artifact: 64-byte blocks moving L3→L2→L1
+   - OS behavior: None (hardware managed)
+   - Hardware effect: L1 hit = 4ns; miss = 60ns
+
+7. **ALU ops (flags)**
+   - Artifact: ADD, CMP, JNZ instructions
+   - OS behavior: None (hardware execution)
+   - Hardware effect: Branch predictor directs flow
+
+8. **Optional GPU kernel** (fraud detection)
+   - Artifact: CUDA kernel launch
+   - OS behavior: Driver submission, queue management
+   - Hardware effect: 1000s of cores in parallel
+
+9. **Response sent**
+   - Artifact: TCP packet assembled
+   - OS behavior: Network stack traversal
+   - Hardware effect: DMA to NIC, interrupts
 
 **Real Numbers**:
 - **Your ParThread.c**: 4 threads, 37ms, 25MB file
 - **Production vLLM**: 18,432 threads, 50ms, 70B parameter model
-- **Scale Factor**: 4,608x more threads, similar concepts
+- **Scale Factor**: 4,608x more threads, same principles
+
+**Modern Hardware Context (2024)**:
+- **AWS Graviton4**: 96 Arm Neoverse-V2 cores, 2MB L2/core, 12-channel DDR5-5600
+- **NVIDIA H100 SXM**: 14,592 CUDA cores, 80GB HBM3, 3.35TB/s bandwidth
+- **Key Insight**: The same DS&A principles apply whether you have 4 cores or 18,432
 
 ---
 
@@ -8749,5 +9083,65 @@ void* concurrent_tree_search(tree_t* tree, key_t key) {
 **The Result:** A comprehensive understanding of how data structures and algorithms connect from silicon gates to business value, with your parallel file compression system as the perfect demonstration of these principles in action.
 
 This foundation prepares you for any technical challenge, from competitive programming contests to building the next generation of scalable systems! 🎓🚀💼
+
+---
+
+## Project 1 — Submission Checklist & Rubric
+
+### Required Deliverables
+
+- [ ] **End-to-End Scenario Trace**
+  - Choose one scenario (e.g., "Buy Now" click)
+  - Trace through Org × OS × DS&A layers
+  - Include timing estimates at each layer
+
+- [ ] **One Intersection Mini-Case**
+  - Implement one of Cases A, B, or C with actual code
+  - Measure and report performance metrics
+  - Explain the Org/OS/DS&A interactions
+
+- [ ] **Cache Analysis**
+  - Calculate expected L1/L2/L3 miss rates for your DS choice
+  - Include AMAT (Average Memory Access Time) calculation
+  - Show how layout affects performance
+
+- [ ] **Scheduling Story**
+  - Map your threads to CPU cores
+  - Calculate context switch overhead
+  - Show scheduler decisions with timeline
+
+- [ ] **Data Structure Rationale**
+  - Justify your DS choice with hardware considerations
+  - Compare with alternatives (show numbers)
+  - Explain paging/TLB implications
+
+### Rubric
+
+| Criteria | Excellent (100%) | Good (85%) | Satisfactory (70%) |
+|----------|-----------------|------------|-------------------|
+| **Integration** | All three domains deeply connected | Two domains well connected | Domains treated separately |
+| **Performance** | Quantitative analysis with real numbers | Qualitative analysis | Only theoretical claims |
+| **Code Quality** | Production-ready, well-documented | Functional but some issues | Basic implementation |
+| **Insights** | Deep hardware/software insights | Good observations | Surface-level explanations |
+| **Presentation** | Clear, professional, concise | Adequate presentation | Hard to follow |
+
+### Success Metrics
+
+Your project is successful if you can:
+1. Predict performance within 20% of actual measurements
+2. Explain three DS trade-offs in hardware terms
+3. Map any C++ code snippet to gate-level operations
+4. Optimize a simple program by 10x using these principles
+
+### Submission Format
+
+Create a single PDF document containing:
+1. Executive summary (1 page)
+2. Scenario trace with diagrams
+3. Code and performance measurements
+4. Hardware/OS/DS&A analysis
+5. Lessons learned and insights
+
+**Total length**: 10-15 pages (be concise!)
 
 ---

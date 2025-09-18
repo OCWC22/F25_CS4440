@@ -1,0 +1,58 @@
+Src.txt inputs for Problems 1-5 to be outputted in dst.txt after running each program:
+
+Problem1: 
+src.txt:
+
+1111111111111111 
+00000000000000000000
+
+Output (dst.txt): 
+
++16+ 
+-20-
+
+Problem2:
+src.txt:
+
++16+ 
+-20-
+
+Output (dst.txt):
+
+1111111111111111 
+00000000000000000000
+
+Problem3:
+
+No input in src.txt do ./Problem3 in terminal
+
+Output (In terminal):
+
+child process 33965 
+else part: child process 33965 
+else part: parent process 33962 
+
+Problem4: 
+src.txt: 
+
+HeLLo
+ABC xyz 1010
+
+Output (dst.txt): 
+
+hello
+abc xyz 1010
+
+Problem5: 
+src.txt:
+
+1111111111111111 0000000000000000
+1010101010101010
+00000000000000000000 11111111111111111111
+
+Output (dst.txt): 
+
++16+ -16-
+1010101010101010
+-20- +20+
+

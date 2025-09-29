@@ -7,7 +7,7 @@
 #define PROMPT "minishell> "
 #define MAX_CMD_LEN 100
 
-int main() {
+int main(void) {
     char cmd[MAX_CMD_LEN];
 
     while (1) {

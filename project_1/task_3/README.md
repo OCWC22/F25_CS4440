@@ -20,16 +20,27 @@ gcc -O2 -Wall -Wextra -std=c11 ForkCompress.c -o ForkCompress
 ./ForkCompress input_file output_file
 ```
 
-## Example
+## Example Run
 ```bash
 ./ForkCompress sample_fork.txt fork_test.cmp
+```
+
+**Sample Input (sample_fork.txt):**
+```
+111111111110000101010101010101010101010101010101010101010101010101
+```
+
+**Sample Output (fork_test.cmp):**
+```
+111111111110000101010101010101010101010101010101010101010101010101
 ```
 
 ## Process Management
 - Creates child process using fork()
 - Executes MyCompress using execl()
-- Parent process waits for child completion
+- Parent process waits for child completion using waitpid()
 - Proper error handling for fork/exec failures
+- Returns appropriate exit codes
 
 ## Status
 ✅ Complete - All requirements met and tested

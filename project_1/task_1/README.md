@@ -19,9 +19,23 @@ gcc -O2 -Wall -Wextra -std=c11 MyCompress.c -o MyCompress
 ./MyCompress input_file output_file
 ```
 
-## Example
+## Example Run
 ```bash
 ./MyCompress sample.txt test_output.cmp
+```
+
+**Sample Input (sample.txt):**
+```
+111111111110000101010101010101010101010101010101010101010101010101
+010101 1010101010000000000000000000000000000000000001
+0111111111111111111111111
+```
+
+**Sample Output (test_output.cmp):**
+```
+111111111110000101010101010101010101010101010101010101010101010101
+010101 101010101-36-1
+0+24+
 ```
 
 ## Status

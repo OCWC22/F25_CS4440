@@ -9,7 +9,7 @@ Implement an enhanced shell that can parse and handle command-line arguments.
 
 ## Compilation
 ```bash
-gcc MoreShell.c -o MoreShell
+gcc -O2 -Wall -Wextra -std=c11 MoreShell.c -o MoreShell
 ```
 
 ## Usage
@@ -26,13 +26,21 @@ gcc MoreShell.c -o MoreShell
 - Support for commands with variable number of arguments
 - Supports 'exit' command to terminate shell
 
-## Example Commands
-```
+## Example Session
+```bash
+$ ./MoreShell
 moreshell> ls -l
+total 16
+-rwxr-xr-x 1 chen staff 34248 Sep 28 21:14 MoreShell
+-rw-r--r-- 1 chen staff  1745 Sep 28 21:14 MoreShell.c
+-rw-r--r-- 1 chen staff   810 Sep 28 21:14 README.md
 moreshell> echo hello world
-moreshell> grep pattern file
-moreshell> cat file.txt | wc -l
+hello world
+moreshell> wc -l MoreShell.c
+18 MoreShell.c
 moreshell> exit
+Exiting moreshell.
+$
 ```
 
 ## Status

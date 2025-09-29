@@ -9,7 +9,7 @@ Implement a shell that can handle I/O redirection using pipes (|).
 
 ## Compilation
 ```bash
-gcc DupShell.c -o DupShell
+gcc -O2 -Wall -Wextra -std=c11 DupShell.c -o DupShell
 ```
 
 ## Usage
@@ -26,19 +26,25 @@ gcc DupShell.c -o DupShell
 - Support for commands like "ls -l | wc"
 - Supports 'exit' command to terminate shell
 
-## Example Commands
-```
-dupshell> ls -l | wc
-dupshell> cat file.txt | grep pattern
-dupshell> ps aux | grep process
+## Example Session
+```bash
+$ ./DupShell
+dupshell> ls -l | wc -l
+3
+dupshell> echo "hello world" | wc -c
+12
+dupshell> cat /dev/null | wc -l
+0
 dupshell> exit
+Exiting dupshell.
+$
 ```
 
 ## Process Management
 - Creates pipe for inter-process communication
 - Forks processes for each command in pipeline
-- Uses dup2() to redirect stdin/stdout
-- Properly manages file descriptors
+- Uses dup2() to redirect stdin/stdout appropriately
+- Properly manages file descriptors and cleanup
 - Waits for all processes to complete
 
 ## Status

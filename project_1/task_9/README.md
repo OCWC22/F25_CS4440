@@ -1,18 +1,16 @@
 # Task 9: Thread-based Compression
 
 ## Description
-Implement compression using POSIX threads (pthread) as an alternative to fork processes. This task demonstrates fundamental parallel computing principles that scale to modern AI inference workloads on AWS Graviton processors and NVIDIA GPUs.
+Implement compression using POSIX threads (pthread) as an alternative to fork processes.
 
 ## Files
 - `ParThread.c` - Source code with pthread implementation
 - `ParThread` - Compiled executable
-- `parthread_test.cmp` - Test output
-- `PARTHREAD_ANALYSIS.md` - Comprehensive technical analysis
-- `README.md` - This file
+- `thread_test.cmp` - Test output
 
 ## Compilation
 ```bash
-gcc ParThread.c -o ParThread -lpthread
+gcc -O2 -Wall -Wextra -std=c11 ParThread.c -o ParThread -lpthread
 ```
 
 ## Usage
@@ -20,10 +18,34 @@ gcc ParThread.c -o ParThread -lpthread
 ./ParThread num_threads input_file output_file
 ```
 
-## Example
+## Example Run
 ```bash
-./ParThread 4 ../task_10/large_test.txt parthread_test.cmp
+./ParThread 4 ../task_1/sample.txt thread_test.cmp
 ```
+
+**Sample Input (from ../task_1/sample.txt):**
+```
+111111111110000101010101010101010101010101010101010101010101010101
+010101 1010101010000000000000000000000000000000000001
+0111111111111111111111111
+```
+
+**Sample Output (thread_test.cmp):**
+```
+111111111110000101010101010101010101010101010101010101010101010101
+010101 101010101-36-1
+0+24+
+```
+
+## Thread Management
+- Uses `pthread_create()` for thread creation
+- Divides file among multiple threads using fixed-size chunking
+- Implements thread-safe compression logic with local buffers
+- Uses `pthread_join()` to wait for thread completion
+- Handles shared data and synchronization
+
+## Status
+✅ Complete - All requirements met and tested
 
 ## Thread Management
 - Uses `pthread_create()` for thread creation

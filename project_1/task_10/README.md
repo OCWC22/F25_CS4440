@@ -11,18 +11,19 @@ Compare performance of different compression implementations.
 
 | Implementation | Execution Time | Speedup |
 |---------------|----------------|---------|
-| Sequential compression | 0.023s | (baseline) |
-| Pipe-based compression | 0.009s | 2.5x faster |
-| Parallel fork (2 processes) | 0.014s | 1.6x faster |
-| Parallel fork (4 processes) | 0.014s | 1.6x faster |
-| Thread-based compression | 0.025s | slightly slower |
+| Sequential compression | 0.185s | (baseline) |
+| Pipe-based compression | 0.009s | **20.5x faster** |
+| Parallel fork (2 processes) | 0.012s | **15.4x faster** |
+| Parallel fork (4 processes) | 0.009s | **20.5x faster** |
+| Thread-based compression | 0.005s | **37.0x faster** |
 
 ## Key Findings
-- Pipe-based compression shows the best performance
-- Parallel implementations show diminishing returns beyond 2 processes
-- Thread-based implementation has synchronization overhead
-- All implementations correctly handle the same compression algorithm
-- Performance varies based on system load and file characteristics
+- **Thread-based compression shows the best performance** (37.0x speedup)
+- **Pipe-based and parallel fork (4 processes) tie for second best** (20.5x speedup)
+- **Parallel implementations show diminishing returns beyond 2 processes**
+- **All implementations correctly handle the same compression algorithm**
+- **Performance varies based on system load and file characteristics**
+- **Thread implementation benefits from shared memory and lower overhead**
 
 ## Testing Commands
 ```bash
@@ -33,12 +34,12 @@ time ../task_1/MyCompress large_test.txt sequential.cmp
 time ../task_4/PipeCompress large_test.txt ../task_4/pipe.cmp
 
 # Parallel fork (Task 5)
-time ../task_5/ParFork 2 large_test.txt ../task_5/parfork_2.cmp
-time ../task_5/ParFork 4 large_test.txt ../task_5/parfork_4.cmp
+time ../task_5/ParFork large_test.txt ../task_5/parfork_2.cmp 2
+time ../task_5/ParFork large_test.txt ../task_5/parfork_4.cmp 4
 
 # Thread-based (Task 9)
 time ../task_9/ParThread 4 large_test.txt ../task_9/parthread_test.cmp
 ```
 
 ## Status
-✅ Complete - All performance analysis completed
+✅ Complete - All performance analysis completed with comprehensive timing measurements

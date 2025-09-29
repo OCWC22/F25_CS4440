@@ -39,7 +39,7 @@ int parse_pipe_command(char *cmd, char **cmd1_args, char **cmd2_args) {
     return 1; // Pipe found and parsed successfully
 }
 
-int main() {
+int main(void) {
     char cmd[MAX_CMD_LEN];
     char *cmd1_args[MAX_ARGS], *cmd2_args[MAX_ARGS];
 

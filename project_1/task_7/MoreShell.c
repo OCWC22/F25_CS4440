@@ -20,7 +20,7 @@ void parse_args(char *cmd, char **args) {
     args[i] = NULL; // Null-terminate the argument list
 }
 
-int main() {
+int main(void) {
     char cmd[MAX_CMD_LEN];
     char *args[MAX_ARGS];
 

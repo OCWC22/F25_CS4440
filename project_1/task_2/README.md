@@ -18,9 +18,23 @@ gcc -O2 -Wall -Wextra -std=c11 MyDecompress.c -o MyDecompress
 ./MyDecompress compressed_file output_file
 ```
 
-## Example
+## Example Run
 ```bash
 ./MyDecompress ../task_1/test_output.cmp restored.txt
+```
+
+**Sample Input (compressed file):**
+```
+111111111110000101010101010101010101010101010101010101010101010101
+010101 101010101-36-1
+0+24+
+```
+
+**Sample Output (restored.txt):**
+```
+111111111110000101010101010101010101010101010101010101010101010101
+010101 1010101010000000000000000000000000000000000001
+0111111111111111111111111
 ```
 
 ## Verification

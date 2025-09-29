@@ -252,12 +252,12 @@ time ../task_9/ParThread 4 large_test.txt ../task_9/parthread_test.cmp
 
 **What We're Learning**: Parallel processing and scaling challenges
 
-**Implementation**: Divides file into chunks, creates multiple child processes to compress each chunk in parallel, then assembles results.
+**Implementation**: Loads entire file into memory, divides into chunks, creates multiple child processes to compress each chunk in parallel, then assembles results.
 
 **Key Features**:
-- File-based chunking for memory efficiency
+- Memory-based chunking for simplicity
 - Multiple process coordination
-- Temporary file management
+- Pipe-based result collection
 - Parallel compression with result merging
 
 **Why This Approach**: Explores parallel processing trade-offs and synchronization overhead.

@@ -52,6 +52,11 @@ This project implements file compression using run-length encoding with Unix pro
 
 - `task_10/README.md` - Performance analysis documentation
 - `task_10/large_test.txt` - Large test file for benchmarking
+- `task_10/sequential.cmp` - Sequential compression benchmark result
+- `task_10/pipe.cmp` - Pipe-based compression benchmark result
+- `task_10/parfork_2.cmp` - Parallel fork (2 processes) benchmark result
+- `task_10/parfork_4.cmp` - Parallel fork (4 processes) benchmark result
+- `task_10/thread_test.cmp` - Thread-based compression benchmark result
 
 - `Makefile` - Single makefile to compile all executables
 - `compress.py` - Python reference implementation
@@ -68,11 +73,18 @@ This will compile all 9 tasks using the provided Makefile with the following fla
 - `-lpthread` for Task 9 (threading)
 
 ## Time Information from Task 10 Performance Analysis
-Based on benchmarking results:
-- Sequential (Task 1): 0.023s baseline
-- Pipe-based (Task 4): 0.009s (2.5x faster)
-- Parallel Fork (Task 5): 0.014s (1.6x faster)
-- Thread-based (Task 9): 0.025s (slightly slower due to overhead)
+Based on benchmarking results with 100KB test file:
+- Sequential (Task 1): 0.185s baseline
+- Pipe-based (Task 4): 0.009s (20.5x faster)
+- Parallel Fork (Task 5, 2 processes): 0.012s (15.4x faster)
+- Parallel Fork (Task 5, 4 processes): 0.009s (20.5x faster)
+- Thread-based (Task 9): 0.005s (37.0x faster)
+
+**Key findings:**
+- Thread-based implementation shows the best performance due to shared memory
+- Pipe-based compression offers excellent performance with low overhead
+- Parallel fork shows diminishing returns beyond 2 processes
+- All implementations correctly handle the compression algorithm
 
 ## Testing Instructions
 1. Test basic compression/decompression:
@@ -92,12 +104,21 @@ Based on benchmarking results:
 
 4. Test parallel processing:
    ```bash
-   cd task_5 && ./ParFork 2 ../task_10/large_test.txt parfork_test.cmp
+   cd task_5 && ./ParFork large_test.txt parfork_test.cmp 2
    ```
 
 5. Test multithreading:
    ```bash
-   cd task_9 && ./ParThread 4 ../task_10/large_test.txt thread_test.cmp
+   cd task_9 && ./ParThread 4 large_test.txt thread_test.cmp
+   ```
+
+6. Test performance analysis (Task 10):
+   ```bash
+   cd task_10 && time ../task_1/MyCompress large_test.txt sequential.cmp
+   time ../task_4/PipeCompress large_test.txt pipe.cmp
+   time ../task_5/ParFork large_test.txt parfork_2.cmp 2
+   time ../task_5/ParFork large_test.txt parfork_4.cmp 4
+   time ../task_9/ParThread 4 large_test.txt thread_test.cmp
    ```
 
 ## Submission Notes

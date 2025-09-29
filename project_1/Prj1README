@@ -72,6 +72,54 @@ This will compile all 9 tasks using the provided Makefile with the following fla
 - `-std=c11 -O2 -Wall -Wextra -Werror -pedantic` for C compilation
 - `-lpthread` for Task 9 (threading)
 
+### Individual Task Compilation
+If you need to compile individual tasks:
+
+**Task 1 (Sequential Compression):**
+```bash
+cd task_1 && gcc -O2 -Wall -Wextra -std=c11 MyCompress.c -o MyCompress
+```
+
+**Task 2 (Decompression):**
+```bash
+cd task_2 && gcc -O2 -Wall -Wextra -std=c11 MyDecompress.c -o MyDecompress
+```
+
+**Task 3 (Fork-based Compression):**
+```bash
+cd task_3 && gcc -O2 -Wall -Wextra -std=c11 ForkCompress.c -o ForkCompress
+```
+
+**Task 4 (Pipe-based Compression):**
+```bash
+cd task_4 && gcc -O2 -Wall -Wextra -std=c11 PipeCompress.c -o PipeCompress
+```
+
+**Task 5 (Parallel Fork):**
+```bash
+cd task_5 && gcc -O2 -Wall -Wextra -std=c11 ParFork.c -o ParFork
+```
+
+**Task 6 (Minimal Shell):**
+```bash
+cd task_6 && gcc -O2 -Wall -Wextra -std=c11 MinShell.c -o MinShell
+```
+
+**Task 7 (Enhanced Shell):**
+```bash
+cd task_7 && gcc -O2 -Wall -Wextra -std=c11 MoreShell.c -o MoreShell
+```
+
+**Task 8 (Shell with Pipes):**
+```bash
+cd task_8 && gcc -O2 -Wall -Wextra -std=c11 DupShell.c -o DupShell
+```
+
+**Task 9 (Thread-based Compression):**
+```bash
+cd task_9 && gcc -O2 -Wall -Wextra -std=c11 ParThread.c -o ParThread -lpthread
+```
+
 ## Time Information from Task 10 Performance Analysis
 Based on benchmarking results with 100KB test file:
 - Sequential (Task 1): 0.185s baseline
@@ -87,39 +135,69 @@ Based on benchmarking results with 100KB test file:
 - All implementations correctly handle the compression algorithm
 
 ## Testing Instructions
-1. Test basic compression/decompression:
-   ```bash
-   cd task_1 && ./MyCompress sample.txt test.cmp && cd ../task_2 && ./MyDecompress ../task_1/test.cmp restored.txt && diff ../task_1/sample.txt restored.txt
-   ```
 
-2. Test process management:
-   ```bash
-   cd task_3 && ./ForkCompress sample_fork.txt fork_test.cmp
-   ```
+### 1. Test Basic Compression/Decompression (Tasks 1-2):
+```bash
+# Task 1: Basic compression
+cd task_1 && ./MyCompress sample.txt test_output.cmp
 
-3. Test inter-process communication:
-   ```bash
-   cd task_4 && ./PipeCompress ../task_1/sample.txt pipe_test.cmp
-   ```
+# Task 2: Decompression and verification
+cd ../task_2 && ./MyDecompress ../task_1/test_output.cmp restored.txt
+diff ../task_1/sample.txt restored.txt  # Should show no differences
+```
 
-4. Test parallel processing:
-   ```bash
-   cd task_5 && ./ParFork large_test.txt parfork_test.cmp 2
-   ```
+### 2. Test Process Management (Task 3):
+```bash
+cd task_3 && ./ForkCompress sample_fork.txt fork_test.cmp
+# Output: "MyCompress completed successfully."
+```
 
-5. Test multithreading:
-   ```bash
-   cd task_9 && ./ParThread 4 large_test.txt thread_test.cmp
-   ```
+### 3. Test Inter-process Communication (Task 4):
+```bash
+cd task_4 && ./PipeCompress ../task_1/sample.txt pipe_test.cmp
+# Output: "Pipe compression complete."
+```
 
-6. Test performance analysis (Task 10):
-   ```bash
-   cd task_10 && time ../task_1/MyCompress large_test.txt sequential.cmp
-   time ../task_4/PipeCompress large_test.txt pipe.cmp
-   time ../task_5/ParFork large_test.txt parfork_2.cmp 2
-   time ../task_5/ParFork large_test.txt parfork_4.cmp 4
-   time ../task_9/ParThread 4 large_test.txt thread_test.cmp
-   ```
+### 4. Test Parallel Processing (Task 5):
+```bash
+cd task_5 && ./ParFork 2 ../task_1/sample.txt parfork_test.cmp
+# Output: Shows parallel processing with 2 processes
+```
+
+### 5. Test Shell Implementations:
+
+**Task 6 (Minimal Shell):**
+```bash
+cd task_6 && echo "pwd" | ./MinShell
+# Should show current directory
+```
+
+**Task 7 (Enhanced Shell):**
+```bash
+cd task_7 && echo "echo 'Hello World'" | ./MoreShell
+# Should output: Hello World
+```
+
+**Task 8 (Shell with Pipes):**
+```bash
+cd task_8 && echo "echo 'test message' | wc -c" | ./DupShell
+# Should output: 13 (character count)
+```
+
+### 6. Test Multithreading (Task 9):
+```bash
+cd task_9 && ./ParThread 4 ../task_1/sample.txt thread_test.cmp
+# Output: "Threaded compression complete with 4 threads."
+```
+
+### 7. Test Performance Analysis (Task 10):
+```bash
+cd task_10 && time ../task_1/MyCompress large_test.txt sequential.cmp
+time ../task_4/PipeCompress large_test.txt pipe.cmp
+time ../task_5/ParFork large_test.txt parfork_2.cmp 2
+time ../task_5/ParFork large_test.txt parfork_4.cmp 4
+time ../task_9/ParThread 4 large_test.txt thread_test.cmp
+```
 
 ## Submission Notes
 - All source code includes internal documentation with clear purpose statements

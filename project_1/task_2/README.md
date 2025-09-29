@@ -4,14 +4,13 @@
 Implement a decompression program that reverses the compression process and restores original files.
 
 ## Files
-- `MyDecompress.c` - Source code
+- `MyDecompress.c` - Source code for the decompression program
 - `MyDecompress` - Compiled executable
-- `restored_test.txt` - Decompressed output from Task 1
-- `restored_show.txt` - Decompressed output from additional test
+- `restored.txt` - Decompressed output file
 
 ## Compilation
 ```bash
-gcc MyDecompress.c -o MyDecompress
+gcc -O2 -Wall -Wextra -std=c11 MyDecompress.c -o MyDecompress
 ```
 
 ## Usage
@@ -21,13 +20,13 @@ gcc MyDecompress.c -o MyDecompress
 
 ## Example
 ```bash
-./MyDecompress ../task_1/test_output.cmp restored_test.txt
+./MyDecompress ../task_1/test_output.cmp restored.txt
 ```
 
 ## Verification
 To verify the decompression works correctly:
 ```bash
-diff original_file restored_file
+diff ../task_1/sample.txt restored.txt
 ```
 
 ## Status

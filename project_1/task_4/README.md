@@ -4,14 +4,14 @@
 Implement compression using pipe() for inter-process communication between parent and child processes.
 
 ## Files
-- `PipeCompress.c` - Source code
+- `PipeCompress.c` - Source code for pipe-based compression
 - `PipeCompress` - Compiled executable
-- `pipe.cmp` - Compressed output using pipe
-- `pipe_test.cmp` - Test output
+- `pipe_test.cmp` - Compressed output file
+- `task4_output.cmp` - Additional test output
 
 ## Compilation
 ```bash
-gcc PipeCompress.c -o PipeCompress
+gcc -O2 -Wall -Wextra -std=c11 PipeCompress.c -o PipeCompress
 ```
 
 ## Usage
@@ -21,7 +21,7 @@ gcc PipeCompress.c -o PipeCompress
 
 ## Example
 ```bash
-./PipeCompress ../task_1/sample.txt pipe.cmp
+./PipeCompress ../task_1/sample.txt pipe_test.cmp
 ```
 
 ## Process Communication
@@ -29,9 +29,6 @@ gcc PipeCompress.c -o PipeCompress
 - Child process reads from pipe and compresses to file
 - Handles pipe creation and communication errors
 - Proper file descriptor management
-
-## Performance
-- 0.009s execution time (2.5x faster than sequential)
 
 ## Status
 ✅ Complete - All requirements met and tested

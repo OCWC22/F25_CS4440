@@ -1,0 +1,106 @@
+# CS4440 Project 1: Realizing Concurrency using Unix processes and threads
+
+## Project Overview
+This project implements file compression using run-length encoding with Unix processes and threads. The compression algorithm replaces sequences of 16+ identical bits with +count+ for 1s and -count- for 0s.
+
+## Files Submitted
+- `task_1/MyCompress.c` - Basic sequential compression program
+- `task_1/MyCompress` - Compiled executable for Task 1
+- `task_1/README.md` - Documentation for Task 1
+- `task_1/sample.txt` - Test input file
+- `task_1/test_output.cmp` - Compressed output
+
+- `task_2/MyDecompress.c` - Basic decompression program
+- `task_2/MyDecompress` - Compiled executable for Task 2
+- `task_2/README.md` - Documentation for Task 2
+- `task_2/restored.txt` - Decompressed output
+
+- `task_3/ForkCompress.c` - Fork-based compression
+- `task_3/ForkCompress` - Compiled executable for Task 3
+- `task_3/README.md` - Documentation for Task 3
+- `task_3/MyCompress` - Compression executable for execution
+- `task_3/sample_fork.txt` - Test input file
+- `task_3/fork_test.cmp` - Compressed output
+
+- `task_4/PipeCompress.c` - Pipe-based compression
+- `task_4/PipeCompress` - Compiled executable for Task 4
+- `task_4/README.md` - Documentation for Task 4
+- `task_4/pipe_test.cmp` - Compressed output
+- `task_4/task4_output.cmp` - Additional test output
+
+- `task_5/ParFork.c` - Parallel fork compression
+- `task_5/ParFork` - Compiled executable for Task 5
+- `task_5/README.md` - Documentation for Task 5
+- `task_5/MyCompress` - Compression executable for execution
+- `task_5/task5_output.cmp` - Compressed output
+
+- `task_6/MinShell.c` - Minimal shell implementation
+- `task_6/MinShell` - Compiled executable for Task 6
+- `task_6/README.md` - Documentation for Task 6
+
+- `task_7/MoreShell.c` - Enhanced shell implementation
+- `task_7/MoreShell` - Compiled executable for Task 7
+- `task_7/README.md` - Documentation for Task 7
+
+- `task_8/DupShell.c` - Shell with pipe support
+- `task_8/DupShell` - Compiled executable for Task 8
+- `task_8/README.md` - Documentation for Task 8
+
+- `task_9/ParThread.c` - Thread-based compression
+- `task_9/ParThread` - Compiled executable for Task 9
+- `task_9/README.md` - Documentation for Task 9
+
+- `task_10/README.md` - Performance analysis documentation
+- `task_10/large_test.txt` - Large test file for benchmarking
+
+- `Makefile` - Single makefile to compile all executables
+- `compress.py` - Python reference implementation
+- `README.md` - Comprehensive project documentation
+
+## Compilation Instructions
+To compile all programs, navigate to the project root directory and run:
+```bash
+make all
+```
+
+This will compile all 9 tasks using the provided Makefile with the following flags:
+- `-std=c11 -O2 -Wall -Wextra -Werror -pedantic` for C compilation
+- `-lpthread` for Task 9 (threading)
+
+## Time Information from Task 10 Performance Analysis
+Based on benchmarking results:
+- Sequential (Task 1): 0.023s baseline
+- Pipe-based (Task 4): 0.009s (2.5x faster)
+- Parallel Fork (Task 5): 0.014s (1.6x faster)
+- Thread-based (Task 9): 0.025s (slightly slower due to overhead)
+
+## Testing Instructions
+1. Test basic compression/decompression:
+   ```bash
+   cd task_1 && ./MyCompress sample.txt test.cmp && cd ../task_2 && ./MyDecompress ../task_1/test.cmp restored.txt && diff ../task_1/sample.txt restored.txt
+   ```
+
+2. Test process management:
+   ```bash
+   cd task_3 && ./ForkCompress sample_fork.txt fork_test.cmp
+   ```
+
+3. Test inter-process communication:
+   ```bash
+   cd task_4 && ./PipeCompress ../task_1/sample.txt pipe_test.cmp
+   ```
+
+4. Test parallel processing:
+   ```bash
+   cd task_5 && ./ParFork 2 ../task_10/large_test.txt parfork_test.cmp
+   ```
+
+5. Test multithreading:
+   ```bash
+   cd task_9 && ./ParThread 4 ../task_10/large_test.txt thread_test.cmp
+   ```
+
+## Submission Notes
+- All source code includes internal documentation with clear purpose statements
+- Test runs demonstrate functionality for correct inputs and graceful error handling
+- Project demonstrates mastery of Unix system calls, process management, and concurrency concepts

@@ -188,29 +188,15 @@ time ../task_9/ParThread 4 large_test.txt ../task_9/parthread_test.cmp
 
 **What We're Learning**: File I/O operations and basic algorithm design
 
-**How It Works**:
-```c
-// Core algorithm: Read file character by character
-while ((current_char = fgetc(source)) != EOF) {
-    if (current_char == prev_char) {
-        count++;  // Track consecutive identical characters
-    } else {
-        if (count >= 16) {
-            // Compress: +20+ for 20 ones, -15- for 15 zeros
-            fprintf(dest, "%c%d%c", (prev_char == '1' ? '+' : '-'), count, (prev_char == '1' ? '+' : '-'));
-        } else {
-            // Don't compress short sequences (inefficient)
-            for (int j = 0; j < count; j++) {
-                fputc(prev_char, dest);
-            }
-        }
-        count = 1;
-        prev_char = current_char;
-    }
-}
-```
+**Implementation**: Uses low-level I/O (read/write) with buffer management for efficient file processing. Implements run-length encoding for sequences of 16+ identical bits using +count+ for 1s and -count- for 0s.
 
-**Why This Approach**: We start with a simple sequential approach to understand the compression algorithm and file I/O basics. This gives us a foundation for more complex implementations.
+**Key Features**:
+- System call-based file I/O for maximum control
+- Handles whitespace and newline separators
+- Compresses only sequences >= 16 characters
+- Efficient buffer management with 64KB chunks
+
+**Why This Approach**: Provides foundation for understanding compression algorithms and low-level file manipulation before moving to more complex implementations.
 
 ---
 
@@ -218,23 +204,15 @@ while ((current_char = fgetc(source)) != EOF) {
 
 **What We're Learning**: Reverse algorithms and data integrity
 
-**How It Works**:
-```c
-// Parse compression patterns like "+20+" or "-15-"
-if (current_char == '+' || current_char == '-') {
-    int count = 0;
-    // Read the number between symbols
-    while ((next_char = fgetc(source)) >= '0' && next_char <= '9') {
-        count = count * 10 + (next_char - '0');
-    }
-    // Expand the pattern
-    for (int i = 0; i < count; i++) {
-        fputc(current_char == '+' ? '1' : '0', dest);
-    }
-}
-```
+**Implementation**: Parses compressed format (+count+ and -count-) and expands back to original format using low-level I/O operations.
 
-**Why This Approach**: We need to ensure our compression is reversible. This teaches us about data integrity and how to design algorithms that can perfectly restore original data.
+**Key Features**:
+- Robust parsing of compression markers
+- Handles mixed compressed and uncompressed data
+- System call-based for consistency with Task 1
+- Error handling for malformed input
+
+**Why This Approach**: Ensures our compression is reversible and teaches data integrity verification.
 
 ---
 
@@ -242,24 +220,15 @@ if (current_char == '+' || current_char == '-') {
 
 **What We're Learning**: Process creation and management using system calls
 
-**How It Works**:
-```c
-pid_t pid = fork();  // Create new process
-if (pid == 0) {
-    // Child process - executes MyCompress
-    execl("./MyCompress", "MyCompress", input_file, output_file, NULL);
-    perror("execl failed");  // Only reached if exec fails
-    exit(1);
-} else {
-    // Parent process - waits for child to complete
-    waitpid(pid, &status, 0);
-    if (WIFEXITED(status)) {
-        printf("Child process completed with status: %d\n", WEXITED(status));
-    }
-}
-```
+**Implementation**: Creates child process using fork() and executes MyCompress program using execl(). Parent waits for completion with comprehensive status reporting.
 
-**Why This Approach**: We're learning how operating systems create processes. The parent process waits for the child to complete, demonstrating process lifecycle management.
+**Key Features**:
+- Proper process lifecycle management
+- Command-line argument passing to child
+- Detailed exit status and signal handling
+- Error checking for all system calls
+
+**Why This Approach**: Demonstrates fundamental process creation concepts essential for Unix programming.
 
 ---
 
@@ -267,27 +236,15 @@ if (pid == 0) {
 
 **What We're Learning**: Inter-process communication (IPC)
 
-**How It Works**:
-```c
-int pipe_fd[2];
-pipe(pipe_fd);  // Create communication channel
+**Implementation**: Parent reads source file and writes to pipe, child reads from pipe and performs compression. Uses anonymous pipes for data transfer.
 
-if (fork() == 0) {
-    // Child process - reads from pipe, writes to file
-    close(pipe_fd[1]);  // Close unused write end
-    dup2(pipe_fd[0], STDIN_FILENO);  // Redirect stdin to pipe
-    execl("./MyCompress", "MyCompress", input_file, output_file, NULL);
-} else {
-    // Parent process - reads file, writes to pipe
-    close(pipe_fd[0]);  // Close unused read end
-    // Read file and write to pipe...
-    while ((bytes_read = read(STDIN_FILENO, buffer, BUFFER_SIZE)) > 0) {
-        write(pipe_fd[1], buffer, bytes_read);
-    }
-}
-```
+**Key Features**:
+- Parent-child communication via pipe
+- Buffered I/O for efficiency
+- Proper pipe end management
+- Compression algorithm integrated with IPC
 
-**Why This Approach**: Pipes allow processes to communicate. This demonstrates IPC and shows how data flows between processes in real applications.
+**Why This Approach**: Shows how processes exchange data safely and efficiently.
 
 ---
 
@@ -295,29 +252,15 @@ if (fork() == 0) {
 
 **What We're Learning**: Parallel processing and scaling challenges
 
-**How It Works**:
-```c
-// Divide file into chunks for parallel processing
-long chunk_size = file_size / num_processes;
+**Implementation**: Divides file into chunks, creates multiple child processes to compress each chunk in parallel, then assembles results.
 
-for (int i = 0; i < num_processes; i++) {
-    pid_t pid = fork();
-    if (pid == 0) {
-        // Each child processes its chunk
-        long start = i * chunk_size;
-        long end = (i == num_processes - 1) ? file_size : (i + 1) * chunk_size;
-        process_chunk(input_file, start, end, output_file);
-        exit(0);
-    }
-}
+**Key Features**:
+- File-based chunking for memory efficiency
+- Multiple process coordination
+- Temporary file management
+- Parallel compression with result merging
 
-// Parent waits for all children to complete
-for (int i = 0; i < num_processes; i++) {
-    wait(&status);
-}
-```
-
-**Why This Approach**: We're exploring parallel processing. However, we learned that more processes don't always mean better performance due to coordination overhead.
+**Why This Approach**: Explores parallel processing trade-offs and synchronization overhead.
 
 ---
 
@@ -529,28 +472,39 @@ echo "✅ Performance analysis and optimization"
 echo "✅ Algorithm design and implementation"
 echo ""
 echo "🎉 All system programming concepts mastered!"
+echo ""
+echo "Project Status: ✅ **COMPLETE** - All 10 tasks implemented and tested"
+echo "Ready for Submission: ✅ Follow submission guide above"
+echo "Last Updated: September 28, 2025"
+echo "Difficulty: Intermediate to Advanced"
+echo "Estimated Time: 20-30 hours for full implementation and understanding"
+echo "Key Learning: System programming fundamentals, process management, IPC, multithreading, and performance optimization"
+echo "Submission Ready: Create `Prj1.zip` and upload to Canvas! 🚀"
+### **How to Create Submission Archive**
+
+1. **Compile All Programs**:
+```bash
+cd /path/to/project_1
+make all
 ```
 
-### **Key Takeaways for Instructor Assessment**
-This project demonstrates our understanding of:
-- **Operating Systems Concepts**: Process lifecycle, memory management, IPC
-- **System Programming**: Low-level programming, system calls, performance optimization
-- **Algorithm Design**: Compression algorithms, state management, data integrity
-- **Software Engineering**: Code organization, testing, documentation, analysis
-- **Problem Solving**: Debugging system-level issues, performance tuning
+2. **Create Zip Archive**:
+```bash
+zip -r Prj1.zip task_1/ task_2/ task_3/ task_4/ task_5/ task_6/ task_7/ task_8/ task_9/ task_10/ Makefile compress.py README.md Prj1README
+```
 
-## 📞 Support & Questions
+3. **Verify Archive Contents**:
+```bash
+unzip -l Prj1.zip | head -20
+```
 
-If you encounter issues:
-1. **Check this README** first - most solutions are here
-2. **Review the code** - each implementation is well-commented
-3. **Test step by step** - verify each task individually
-4. **Check file paths** - ensure you're running from correct directories
+### **Submission Files Checklist**
+- ✅ `Prj1.zip` - Compressed source code with meaningful names
+- ✅ `Prj1README` - File listing with compilation instructions and timing info
+- ✅ Internal documentation in all source files
+- ✅ Test runs demonstrating functionality
+
+### **Canvas Submission**
+Upload `Prj1.zip` to the CS4440 Canvas assignment. Ensure the archive contains all required files and the Makefile successfully compiles all executables.
 
 ---
-
-**Project Status**: ✅ **COMPLETE** - All 10 tasks implemented and tested  
-**Last Updated**: September 11, 2025  
-**Difficulty**: Intermediate to Advanced  
-**Estimated Time**: 20-30 hours for full implementation and understanding  
-**Key Learning**: System programming fundamentals, process management, IPC, multithreading, and performance optimization

@@ -4,15 +4,14 @@
 Implement parallel compression using multiple fork() processes to compress file chunks simultaneously.
 
 ## Files
-- `ParFork.c` - Source code
+- `ParFork.c` - Source code for parallel fork compression
 - `ParFork` - Compiled executable
-- `parfork_2.cmp` - Output using 2 processes
-- `parfork_4.cmp` - Output using 4 processes
-- `parfork_test.cmp` - Test output
+- `MyCompress` - Copy of compression executable
+- `task5_output.cmp` - Compressed output file
 
 ## Compilation
 ```bash
-gcc ParFork.c -o ParFork
+gcc -O2 -Wall -Wextra -std=c11 ParFork.c -o ParFork
 ```
 
 ## Usage
@@ -22,8 +21,7 @@ gcc ParFork.c -o ParFork
 
 ## Example
 ```bash
-./ParFork 2 ../task_10/large_test.txt parfork_2.cmp
-./ParFork 4 ../task_10/large_test.txt parfork_4.cmp
+./ParFork 2 ../task_10/large_test.txt task5_output.cmp
 ```
 
 ## Parallel Processing
@@ -32,10 +30,6 @@ gcc ParFork.c -o ParFork
 - Each child compresses its assigned chunk
 - Parent process combines results from all children
 - Handles chunk boundaries and file assembly
-
-## Performance
-- 2 processes: 0.014s (1.6x faster than sequential)
-- 4 processes: 0.014s (similar performance, diminishing returns)
 
 ## Status
 ✅ Complete - All requirements met and tested

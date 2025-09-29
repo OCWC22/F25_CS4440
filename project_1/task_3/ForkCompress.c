@@ -1,18 +1,8 @@
-// ForkCompress.c - Forks and execs MyCompress, then waits for completion.
-// Usage: ForkCompress <source> <destination>
-
-// fork) Write a C program that creates a new process to compress a file using the 
-// MyCompress. This program should spawn a new process using fork system call. Then 
-// use execl to execute MyCompress program. The source and destination file names 
-// presented as command-line arguments should be passed to execl  as system call 
-// arguments. The main process waits for completion of compress operation using wait 
-// system call. (ForkCompress.c à ForkCompress) 
-
+#include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 int main(int argc, char **argv) {

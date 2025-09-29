@@ -4,16 +4,15 @@
 Use fork() and exec() system calls to run MyCompress in a separate process.
 
 ## Files
-- `ForkCompress.c` - Source code
+- `ForkCompress.c` - Source code for fork-based compression
 - `ForkCompress` - Compiled executable
+- `MyCompress` - Copy of the compression executable for execution
 - `sample_fork.txt` - Test input file
-- `fork_test.cmp` - Compressed output
-- `fork_out.cmp` - Additional test output
-- `restored_fork.txt` - Decompressed test output
+- `fork_test.cmp` - Compressed output file
 
 ## Compilation
 ```bash
-gcc ForkCompress.c -o ForkCompress
+gcc -O2 -Wall -Wextra -std=c11 ForkCompress.c -o ForkCompress
 ```
 
 ## Usage

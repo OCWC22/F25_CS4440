@@ -1,71 +1,37 @@
-// project_1/MyDecompress.c
+#include <unistd.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <limits.h>
-#include <string.h>
 
-void decompress(FILE *source, FILE *dest) {
-    char ch;
-    while ((ch = fgetc(source)) != EOF) {
-        if (ch == '+' || ch == '-') {
-            int count = 0;
-            char bit_to_write = (ch == '+') ? '1' : '0';
-            fscanf(source, "%d", &count);
-            fgetc(source); // Consume the closing delimiter
+static void write_repeated(int out, char ch, long n){
+    while(n-->0) write(out,&ch,1);
+}
 
-            for (int i = 0; i < count; i++) {
-                fputc(bit_to_write, dest);
+static void decompress_fd(int in, int out){
+    unsigned char c;
+    while(read(in,&c,1)==1){
+        if(c=='+' || c=='-'){
+            char sign = c; long num = 0; unsigned char d;
+            while(read(in,&d,1)==1 && d>='0' && d<='9') num = num*10 + (d-'0');
+            if(d==sign && num>0){ write_repeated(out, sign=='+'?'1':'0', num); }
+            else{
+                write(out,&sign,1);
+                if(num){ char buf[32]; int m=snprintf(buf,sizeof(buf), "%ld", num); write(out,buf,m); }
+                if(d) write(out,&d,1);
             }
-        } else {
-            fputc(ch, dest);
+        }else{
+            write(out,&c,1);
         }
     }
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s <compressed_file> <destination_file>\n", argv[0]);
-        return 1;
-    }
-
-    FILE *source = fopen(argv[1], "r");
-    if (source == NULL) {
-        perror("Error opening compressed file");
-        return 1;
-    }
-
-    // Ensure outputs/ directory exists
-    if (mkdir("outputs", 0755) < 0 && errno != EEXIST) {
-        perror("mkdir outputs");
-        fclose(source);
-        return 1;
-    }
-
-    // Build outputs/<basename(destination)>
-    const char *dest_arg = argv[2];
-    const char *base = strrchr(dest_arg, '/');
-    base = (base != NULL) ? base + 1 : dest_arg;
-    char out_path[PATH_MAX];
-    if (snprintf(out_path, sizeof(out_path), "outputs/%s", base) >= (int)sizeof(out_path)) {
-        fprintf(stderr, "Destination path too long.\n");
-        fclose(source);
-        return 1;
-    }
-
-    FILE *dest = fopen(out_path, "w");
-    if (dest == NULL) {
-        perror("Error opening destination file");
-        fclose(source);
-        return 1;
-    }
-
-    decompress(source, dest);
-    printf("File decompressed successfully -> %s\n", out_path);
-    fclose(source);
-    fclose(dest);
+int main(int argc, char *argv[]){
+    if(argc!=3){ dprintf(2,"usage: %s compressed.txt out.txt\n",argv[0]); return 1; }
+    int fdin = open(argv[1], O_RDONLY);
+    if(fdin<0){ perror("open in"); return 1; }
+    int fdout = open(argv[2], O_RDWR|O_CREAT|O_TRUNC, 0644);
+    if(fdout<0){ perror("open out"); close(fdin); return 1; }
+    decompress_fd(fdin, fdout);
+    close(fdin); close(fdout);
     return 0;
 }

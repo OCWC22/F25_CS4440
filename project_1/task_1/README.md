@@ -4,17 +4,14 @@
 Implement a sequential compression program that compresses sequences of 16+ identical bits using the format `+count+` for 1s and `-count-` for 0s.
 
 ## Files
-- `MyCompress.c` - Source code
+- `MyCompress.c` - Source code for the compression program
 - `MyCompress` - Compiled executable
-- `sample.txt` - Test input file
-- `sample_show.txt` - Additional test file
-- `test_output.cmp` - Compressed output
-- `show.cmp` - Additional compressed output
-- `compressed.txt` - Test compression result
+- `sample.txt` - Test input file containing binary data
+- `test_output.cmp` - Compressed output file
 
 ## Compilation
 ```bash
-gcc MyCompress.c -o MyCompress
+gcc -O2 -Wall -Wextra -std=c11 MyCompress.c -o MyCompress
 ```
 
 ## Usage

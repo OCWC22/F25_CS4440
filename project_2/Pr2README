@@ -1,0 +1,429 @@
+# CS4440 Project 2: Concurrency and Synchronization
+## Hardware-Aware Implementation for Intel Xeon Sapphire Rapids
+
+## Project Overview
+
+This project implements three classic concurrency problems using POSIX pthread and semaphore primitives. Each implementation includes comprehensive hardware-aware comments that explain the end-to-end execution flow from user code through the operating system kernel to the CPU hardware.
+
+**Educational Focus:**
+- Connect POSIX synchronization primitives to real hardware execution
+- Explain Intel Xeon Sapphire Rapids CPU architecture features
+- Demonstrate cache coherency (MESI protocol) in multi-threaded programs
+- Show complete execution flow: user code → glibc → kernel → CPU
+- Provide insights for CTOs and engineers on OS/hardware interaction
+
+## Files Submitted
+
+### Source Code
+- `bounded_buffer.c` - Problem 1: Bounded-buffer producer/consumer
+- `mh.c` - Problem 2: Mother Hubbard synchronization
+- `airline.c` - Problem 3: Airline passenger processing
+
+### Build System
+- `Makefile` - Comprehensive build system with test targets
+
+### Documentation
+- `Pr2README` - This file
+- `hardware_architecture_guide.md` - Deep dive into Intel Xeon architecture
+- `synchronization_primitives_explained.md` - POSIX primitives → hardware mapping
+
+### Test Scripts
+- `test_all.sh` - Automated test script for all problems
+
+## Compilation Instructions
+
+### Build All Programs
+```bash
+make all
+```
+
+This compiles all three programs with the following flags:
+- `-std=c11` - C11 standard
+- `-Wall -Wextra -Werror -pedantic` - Strict error checking
+- `-O2` - Optimization level 2
+- `-pthread` - POSIX threads support
+
+### Build Individual Programs
+```bash
+make bounded_buffer  # Problem 1
+make mh              # Problem 2
+make airline         # Problem 3
+```
+
+### Clean Build Artifacts
+```bash
+make clean
+```
+
+## Execution Instructions
+
+### Problem 1: Bounded-Buffer Producer/Consumer
+
+**Description:** Implements a classic producer-consumer pattern with a bounded circular buffer. One producer generates printable characters, one consumer prints them. Demonstrates mutex and semaphore synchronization.
+
+**Usage:**
+```bash
+./bounded_buffer
+```
+
+**Expected Output:**
+- Producer produces 50 characters (A-Z)
+- Consumer consumes 50 characters
+- Buffer size: 10 items
+- Demonstrates buffer empty, buffer full, and concurrent operation
+
+**Hardware Concepts Demonstrated:**
+- Mutex fast path (atomic CAS) vs. slow path (futex syscall)
+- Semaphore implementation using atomic operations
+- Cache coherency (MESI protocol) for shared buffer
+- Context switching overhead
+- Memory barriers and atomic operations
+
+**Sample Output:**
+```
+=== Bounded-Buffer Producer/Consumer ===
+Buffer Size: 10
+Items to produce/consume: 50
+
+[Producer 1] Produced: A at position 0 (count: 1)
+[Consumer 1] Consumed: A from position 0 (count: 0)
+[Producer 1] Produced: B at position 1 (count: 1)
+...
+=== Execution Complete ===
+Final buffer count: 0 (should be 0)
+```
+
+### Problem 2: Mother Hubbard
+
+**Description:** Complex synchronization problem with two threads (Mother and Father) coordinating to process 12 children through multiple tasks. Demonstrates thread coordination with dependencies.
+
+**Usage:**
+```bash
+./mh <number_of_cycles>
+```
+
+**Examples:**
+```bash
+./mh 3    # Run for 3 cycles (days)
+./mh 10   # Run for 10 cycles
+./mh 100  # Run for 100 cycles (stress test)
+```
+
+**Expected Output:**
+- Mother performs tasks 1-4 on all children sequentially
+- After each child's bath, Father can process that child
+- Father performs tasks 5-6 on each child
+- When all children in bed, Father wakes Mother for next cycle
+
+**Hardware Concepts Demonstrated:**
+- Thread blocking and wakeup mechanisms
+- Futex system calls for thread synchronization
+- Cache line padding to prevent false sharing
+- Thread scheduling and context switching
+- NUMA considerations for multi-socket systems
+
+**Sample Output:**
+```
+=== Mother Hubbard Simulation ===
+Number of cycles: 3
+Number of children: 12
+
+=== Day #1: Mother wakes up ===
+Child #1 is being woken up and fed breakfast.
+Child #2 is being woken up and fed breakfast.
+...
+Child #1 is being given a bath.
+Child #1 is being read a book by Father.
+Child #1 is being tucked in bed by Father.
+...
+Father has tucked all children in bed and is going to sleep.
+Father wakes up Mother for the next day.
+```
+
+### Problem 3: Airline Passengers
+
+**Description:** Multi-stage pipeline with passenger threads and worker threads (baggage handlers, security screeners, flight attendants). Demonstrates thread pool pattern and resource management.
+
+**Usage:**
+```bash
+./airline <passengers> <baggage_handlers> <security_screeners> <flight_attendants>
+```
+
+**Examples:**
+```bash
+./airline 10 2 2 1    # Small test: 10 passengers
+./airline 50 3 5 2    # Medium test: 50 passengers
+./airline 100 3 5 2   # Large test: 100 passengers (as specified)
+```
+
+**Expected Output:**
+- All passengers arrive at terminal
+- Each passenger processed through 3 stages
+- Workers process passengers concurrently
+- Plane takes off when all passengers seated
+
+**Hardware Concepts Demonstrated:**
+- Thread pool pattern for worker threads
+- Semaphore-based resource management
+- Pipeline parallelism across multiple stages
+- Cache line padding to prevent false sharing
+- NUMA-aware memory allocation strategies
+- Lock-free algorithm opportunities
+
+**Sample Output:**
+```
+=== Airline Passenger Processing ===
+Passengers: 10
+Baggage Handlers: 2
+Security Screeners: 2
+Flight Attendants: 1
+
+Passenger #1 arrived at the terminal.
+Passenger #1 is waiting at baggage processing.
+[Baggage Handler #1] Processing passenger #1
+...
+=== All passengers seated! Plane ready for takeoff ===
+=== Flight Departed Successfully ===
+```
+
+## Test Runs
+
+### Automated Testing
+```bash
+make test
+```
+
+This runs all three programs with representative inputs and verifies correct operation.
+
+### Individual Tests
+```bash
+make test_bounded_buffer
+make test_mh
+make test_airline
+```
+
+### Stress Testing
+```bash
+# Test Mother Hubbard with many cycles
+./mh 1000
+
+# Test Airline with many passengers
+./airline 500 10 15 5
+```
+
+## Observations
+
+### Problem 1: Bounded-Buffer Producer/Consumer
+
+**Synchronization Behavior:**
+- Buffer empty condition: Consumer blocks on `sem_wait(&full)` until producer adds item
+- Buffer full condition: Producer blocks on `sem_wait(&empty)` until consumer removes item
+- Concurrent operation: Both threads run simultaneously when buffer partially filled
+
+**Performance Characteristics:**
+- Uncontended mutex lock: ~20-50 CPU cycles (fast path)
+- Contended mutex lock: ~1-10 microseconds (kernel syscall)
+- Context switch overhead: ~1-10 microseconds on Intel Xeon
+- Cache effects: Small buffer (10 items) fits in L1 cache (32KB)
+
+**Hardware Insights:**
+- Mutex uses atomic compare-and-swap (CMPXCHG) in fast path
+- Semaphore uses atomic increment/decrement (LOCK INC/DEC)
+- Cache coherency ensures consistent view across cores
+- Memory barriers prevent CPU reordering of critical section operations
+
+### Problem 2: Mother Hubbard
+
+**Synchronization Behavior:**
+- Mother and Father alternate execution using binary semaphores
+- Mother blocks after completing all tasks (voluntary context switch)
+- Father blocks until Mother bathes each child (dependency enforcement)
+- Cycle repeats N times with perfect synchronization
+
+**Performance Characteristics:**
+- 24 semaphore operations per cycle (12 children × 2 operations)
+- Frequent context switching between Mother and Father threads
+- Cache line padding prevents false sharing (60 bytes padding per child)
+- Sequential processing limits parallelism (inherent to problem)
+
+**Hardware Insights:**
+- False sharing prevented by padding child states to 64-byte cache lines
+- Thread blocking uses futex (fast userspace mutex) system call
+- Context switch includes TLB flush and cache pollution
+- MESI protocol coordinates cache coherency between threads
+
+### Problem 3: Airline Passengers
+
+**Synchronization Behavior:**
+- Worker threads block waiting for passengers (thread pool pattern)
+- Passengers block waiting for available workers (resource management)
+- Pipeline stages allow concurrent processing of different passengers
+- Barrier synchronization signals when all passengers seated
+
+**Performance Characteristics:**
+- True parallelism: workers run on separate CPU cores
+- Scalability: throughput increases with number of workers
+- Bottleneck: slowest stage limits overall throughput (Amdahl's Law)
+- Cache efficiency: padding prevents false sharing between passengers
+
+**Hardware Insights:**
+- Thread pool pattern maximizes CPU utilization
+- Semaphores manage worker availability (counting semaphores)
+- Cache line padding (128 bytes per passenger) prevents false sharing
+- NUMA effects: memory allocation affects multi-socket performance
+- Lock-free algorithms could improve scalability further
+
+## Hardware Architecture: Intel Xeon Sapphire Rapids
+
+### CPU Features
+- **Cores:** Up to 60 cores per socket, 2-way SMT (120 hardware threads)
+- **Cache Hierarchy:**
+  - L1: 48KB instruction + 32KB data per core
+  - L2: 2MB per core
+  - L3: Shared across all cores (up to 112.5MB)
+- **Cache Line Size:** 64 bytes
+- **Cache Coherency:** MESI protocol (Modified, Exclusive, Shared, Invalid)
+- **Memory Ordering:** x86-64 Total Store Order (TSO)
+- **Atomic Operations:** LOCK prefix, CMPXCHG, XCHG
+- **Advanced Features:** Hardware lock elision (HLE), restricted transactional memory (RTM)
+
+### Synchronization Primitive Implementation
+
+**pthread_mutex_t:**
+1. **Fast path (uncontended):** Atomic CAS in userspace (~20-50 cycles)
+2. **Slow path (contended):** futex() syscall, kernel blocking (~1-10 μs)
+3. **Memory barrier:** LOCK prefix provides full barrier
+4. **Cache coherency:** Cache line enters "Exclusive" state on lock acquisition
+
+**sem_t:**
+1. **sem_wait():** Atomic decrement (LOCK DEC), futex if negative
+2. **sem_post():** Atomic increment (LOCK INC), futex wake if waiters
+3. **Cache coherency:** MESI protocol ensures visibility across cores
+4. **Memory ordering:** Atomic operations include memory barriers
+
+### End-to-End Execution Flow
+
+**User Code → Hardware:**
+```
+pthread_mutex_lock(&mutex)
+    ↓
+glibc (POSIX library)
+    LOCK CMPXCHG [mutex_address], thread_id
+    if (failed) syscall(SYS_futex, FUTEX_WAIT, ...)
+    ↓
+Linux Kernel
+    futex_wait() → add thread to wait queue
+    schedule() → CFS picks next thread
+    context_switch() → save/restore registers
+    ↓
+Intel Xeon CPU
+    LOCK prefix → cache line locking
+    MESI protocol → invalidate other cores' cache lines
+    Context switch → TLB flush, cache miss
+    Scheduler → assign thread to CPU core
+    ↓
+Hardware Execution
+    Instruction fetch from L1 I-cache
+    Decode and dispatch to execution units
+    Out-of-order execution (14-stage pipeline)
+    Memory access through cache hierarchy
+    Retire instructions and update architectural state
+```
+
+## Performance Optimization Opportunities
+
+### 1. Lock-Free Algorithms
+- Replace semaphores with atomic operations (CAS loops)
+- Eliminates kernel involvement
+- Reduces context switching overhead
+- Example: lock-free ring buffer for bounded buffer problem
+
+### 2. CPU Affinity
+- Pin threads to specific CPU cores
+- Reduces cache thrashing from thread migration
+- Improves cache locality
+- Use `pthread_setaffinity_np()`
+
+### 3. NUMA Awareness
+- Allocate memory on local NUMA node
+- Pin threads to same socket as memory
+- Reduces cross-NUMA memory latency (~2x)
+- Use `numa_alloc_onnode()` or `numa_alloc_interleaved()`
+
+### 4. Huge Pages
+- Use 2MB pages instead of 4KB
+- Reduces TLB misses
+- Improves memory access performance
+- Enable with `madvise(MADV_HUGEPAGE)`
+
+### 5. Batch Processing
+- Process multiple items per synchronization operation
+- Amortizes synchronization overhead
+- Improves cache locality
+- Trade-off: latency vs. throughput
+
+## Connecting to Project 1
+
+This project builds on Project 1's hardware-aware coding concepts:
+
+**Project 1 Focus:**
+- Process-level parallelism (fork, pipes)
+- Inter-process communication
+- File I/O and compression algorithms
+- Performance comparison: processes vs. threads
+
+**Project 2 Focus:**
+- Thread-level parallelism (pthreads)
+- Intra-process synchronization
+- Mutex, semaphore, and condition variables
+- Cache coherency and memory barriers
+
+**Common Themes:**
+- Hardware-aware optimization strategies
+- Cache efficiency and locality
+- CPU scheduling and context switching
+- End-to-end execution flow understanding
+- Production-grade code with comprehensive documentation
+
+## References
+
+### Intel Xeon Architecture
+- WikiChip: Sapphire Rapids Microarchitecture
+- Intel Developer Guide: Architecture Optimization
+- Intel 64 and IA-32 Architectures Software Developer's Manual
+
+### POSIX Threads
+- POSIX Threads Programming (LLNL Tutorial)
+- Linux man pages: pthread(7), sem_overview(7)
+- Futex documentation: futex(2), futex(7)
+
+### Concurrency Theory
+- "Operating System Concepts" by Silberschatz, Galvin, Gagne
+- "The Art of Multiprocessor Programming" by Herlihy and Shavit
+- "Linux Kernel Development" by Robert Love
+
+### Hardware-Aware Programming
+- "What Every Programmer Should Know About Memory" by Ulrich Drepper
+- "Systems Performance" by Brendan Gregg
+- Cache-conscious programming resources
+
+## Author Notes
+
+This implementation prioritizes educational value over raw performance. Each program includes extensive comments explaining:
+- What the code does (functionality)
+- Why it's designed this way (rationale)
+- How it executes on real hardware (implementation)
+- Where it could be optimized (opportunities)
+
+The goal is to provide a comprehensive learning resource that connects high-level concurrency concepts to low-level hardware execution, suitable for operating systems courses and professional development.
+
+## Submission Checklist
+
+- [x] Source code for all three problems
+- [x] Comprehensive internal documentation
+- [x] Makefile for compilation
+- [x] Pr2README with observations
+- [x] Test runs demonstrating correct operation
+- [x] Hardware architecture documentation
+- [x] End-to-end execution flow explanations
+- [x] Performance analysis and optimization opportunities

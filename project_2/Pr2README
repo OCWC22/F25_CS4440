@@ -28,7 +28,24 @@ This project implements three classic concurrency problems using POSIX pthread a
 - `synchronization_primitives_explained.md` - POSIX primitives → hardware mapping
 
 ### Test Scripts
-- `test_all.sh` - Automated test script for all problems
+- `test_all.sh` - Automated test script for all problems (success + error cases)
+
+## Submission Packaging
+
+To satisfy the rubric’s packaging requirements, include the following files in the submission archive (e.g., `project_2_submission.zip`):
+- `bounded_buffer.c`
+- `mh.c`
+- `airline.c`
+- `Makefile`
+- `test_all.sh`
+- `Pr2README`
+
+Example packaging command from `project_2/`:
+```bash
+zip project_2_submission.zip bounded_buffer.c mh.c airline.c Makefile test_all.sh Pr2README
+```
+
+The archive may include additional documentation (e.g., `hardware_architecture_guide.md`) if desired, but the files above are mandatory per the instructions.
 
 ## Compilation Instructions
 

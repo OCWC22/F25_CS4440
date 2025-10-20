@@ -100,27 +100,86 @@ int num_flight_attendants;
 /*
  * SYNCHRONIZATION PRIMITIVES:
  * 
- * SEMAPHORE-BASED RESOURCE MANAGEMENT:
+ * SEMAPHORE-BASED RESOURCE MANAGEMENT AND QUEUING:
  * 
- * Semaphores represent available workers:
- * - baggage_sem: counts available baggage handlers
- * - security_sem: counts available security screeners
- * - attendant_sem: counts available flight attendants
- * 
- * HARDWARE IMPLEMENTATION:
- * - Semaphore value stored in memory
- * - Atomic operations (LOCK INC/DEC) modify value
- * - Futex syscall blocks threads when value < 0
- * - Cache coherency ensures all cores see updates
+ * We maintain explicit task queues per processing stage. Each passenger pushes
+ * their ID into the appropriate queue and blocks on a per-passenger semaphore
+ * until a worker thread completes the stage. Worker availability is tracked via
+ * counting semaphores so that passengers never busy-wait—if no worker is
+ * available the passenger blocks inside sem_wait().
  */
-sem_t baggage_sem;
-sem_t security_sem;
-sem_t attendant_sem;
+
+typedef struct {
+    int* buffer;
+    int capacity;
+    int head;
+    int tail;
+    pthread_mutex_t mutex;
+    sem_t items;
+    sem_t spaces;
+} task_queue_t;
+
+typedef struct {
+    sem_t baggage_done;
+    sem_t security_done;
+    sem_t boarded;
+} passenger_sync_t;
+
+task_queue_t baggage_queue;
+task_queue_t security_queue;
+task_queue_t boarding_queue;
+
+sem_t baggage_handlers_available;
+sem_t security_screeners_available;
+sem_t attendants_available;
 sem_t all_seated_sem;  // Signals when all passengers seated
+
+passenger_sync_t* passenger_sync;
 
 // Counters for tracking progress
 pthread_mutex_t counter_mutex;
+pthread_mutex_t state_mutex;
 int passengers_seated = 0;
+
+static int queue_init(task_queue_t* q, int capacity) {
+    q->buffer = malloc(sizeof(int) * capacity);
+    if (!q->buffer) {
+        return -1;
+    }
+    q->capacity = capacity;
+    q->head = 0;
+    q->tail = 0;
+    pthread_mutex_init(&q->mutex, NULL);
+    sem_init(&q->items, 0, 0);
+    sem_init(&q->spaces, 0, capacity);
+    return 0;
+}
+
+static void queue_destroy(task_queue_t* q) {
+    pthread_mutex_destroy(&q->mutex);
+    sem_destroy(&q->items);
+    sem_destroy(&q->spaces);
+    free(q->buffer);
+}
+
+static void queue_push(task_queue_t* q, int value) {
+    sem_wait(&q->spaces);
+    pthread_mutex_lock(&q->mutex);
+    q->buffer[q->tail] = value;
+    q->tail = (q->tail + 1) % q->capacity;
+    pthread_mutex_unlock(&q->mutex);
+    sem_post(&q->items);
+}
+
+static int queue_pop(task_queue_t* q) {
+    sem_wait(&q->items);
+    pthread_mutex_lock(&q->mutex);
+    int value = q->buffer[q->head];
+    q->head = (q->head + 1) % q->capacity;
+    pthread_mutex_unlock(&q->mutex);
+    sem_post(&q->spaces);
+    return value;
+}
 
 /*
  * BAGGAGE HANDLER THREAD:
@@ -139,107 +198,29 @@ void* baggage_handler(void* arg) {
     int handler_id = *(int*)arg;
     free(arg);
     
-    /*
-     * WORKER LOOP:
-     * 
-     * THREAD LIFECYCLE:
-     * 1. RUNNING: Processing passenger
-     * 2. BLOCKED: Waiting for passenger (sem_wait)
-     * 3. RUNNABLE: Woken by passenger arrival
-     * 4. RUNNING: Scheduler assigns to CPU
-     * 
-     * CACHE BEHAVIOR:
-     * - Handler accesses passenger structure
-     * - Cache line loaded from L3 or RAM
-     * - Subsequent accesses hit L1/L2 cache
-     * - Cache line invalidated when passenger moves to next stage
-     */
-    for (int i = 0; i < num_passengers; i++) {
-        /*
-         * WAIT FOR PASSENGER:
-         * 
-         * This is a BLOCKING operation that demonstrates:
-         * 
-         * 1. THREAD SYNCHRONIZATION:
-         *    - Handler waits for passenger to arrive
-         *    - Passenger signals availability via sem_post
-         * 
-         * 2. KERNEL BLOCKING (if no passengers):
-         *    - sem_wait() calls futex(FUTEX_WAIT)
-         *    - Thread state: RUNNING → INTERRUPTIBLE_SLEEP
-         *    - Thread removed from CPU runqueue
-         *    - Context switch: save registers to memory
-         * 
-         * 3. CPU CONTEXT SWITCH:
-         *    - Save: RIP, RSP, RBP, RAX-R15 (general-purpose)
-         *    - Save: XMM0-XMM15 (SSE), YMM0-YMM15 (AVX) if used
-         *    - Save: FPU state, control registers
-         *    - Load: Next thread's register state
-         *    - TLB flush: Clear virtual address translations
-         *    - Cost: ~1-10 microseconds on Intel Xeon
-         * 
-         * 4. WAKEUP (when passenger arrives):
-         *    - Passenger calls sem_post(&baggage_sem)
-         *    - Kernel calls futex(FUTEX_WAKE)
-         *    - Handler: SLEEP → RUNNABLE
-         *    - Scheduler eventually assigns handler to CPU
-         */
-        // Note: In this implementation, we process passengers sequentially
-        // A more realistic implementation would use a work queue
-        
-        // Find next passenger needing baggage processing
-        int passenger_id = -1;
-        for (int j = 0; j < num_passengers; j++) {
-            if (passengers[j].state == ARRIVED) {
-                passenger_id = j;
-                break;
-            }
+    while (true) {
+        int passenger_index = queue_pop(&baggage_queue);
+        if (passenger_index < 0) {
+            break;
         }
-        
-        if (passenger_id >= 0) {
-            /*
-             * PROCESS PASSENGER:
-             * 
-             * CACHE LINE ACCESS:
-             * - Load passengers[passenger_id] from memory
-             * - Cache hierarchy: L1 → L2 → L3 → RAM
-             * - L1 hit: ~4 cycles (1-2 ns)
-             * - L2 hit: ~12 cycles (3-4 ns)
-             * - L3 hit: ~40 cycles (10-15 ns)
-             * - RAM: ~100-200 cycles (50-100 ns)
-             * 
-             * CACHE COHERENCY (MESI Protocol):
-             * - Handler reads passenger state
-             * - Cache line enters "Shared" state (if other cores have it)
-             * - Handler writes passenger state
-             * - Cache line enters "Modified" state
-             * - Other cores' copies invalidated
-             * 
-             * MEMORY BARRIERS:
-             * - Compiler barrier: prevents reordering by compiler
-             * - Hardware barrier: prevents reordering by CPU
-             * - x86-64 TSO: stores not reordered with stores
-             * - LOCK prefix: full memory barrier
-             */
-            passengers[passenger_id].state = BAGGAGE_PROCESSING;
-            printf("[Baggage Handler #%d] Processing passenger #%d\n", 
-                   handler_id, passengers[passenger_id].id);
-            
-            /*
-             * SIMULATE PROCESSING TIME:
-             * 
-             * usleep(100) demonstrates:
-             * - Voluntary context switch
-             * - Thread yields CPU to other threads
-             * - Timer interrupt wakes thread after 100 μs
-             * - Realistic simulation of I/O or computation
-             */
-            usleep(100);
-            
-            passengers[passenger_id].state = BAGGAGE_DONE;
-            printf("[Baggage Handler #%d] Completed passenger #%d\n", 
-                   handler_id, passengers[passenger_id].id);
-        }
+
+        int passenger_id = passengers[passenger_index].id;
+
+        pthread_mutex_lock(&state_mutex);
+        passengers[passenger_index].state = BAGGAGE_PROCESSING;
+        pthread_mutex_unlock(&state_mutex);
+
+        printf("[Baggage Handler #%d] Processing passenger #%d\n", handler_id, passenger_id);
+        usleep(100);
+
+        pthread_mutex_lock(&state_mutex);
+        passengers[passenger_index].state = BAGGAGE_DONE;
+        pthread_mutex_unlock(&state_mutex);
+
+        printf("[Baggage Handler #%d] Completed passenger #%d\n", handler_id, passenger_id);
+
+        sem_post(&passenger_sync[passenger_index].baggage_done);
+        sem_post(&baggage_handlers_available);
     }
     
     return NULL;
@@ -257,27 +238,29 @@ void* security_screener(void* arg) {
     int screener_id = *(int*)arg;
     free(arg);
     
-    for (int i = 0; i < num_passengers; i++) {
-        // Find next passenger needing security screening
-        int passenger_id = -1;
-        for (int j = 0; j < num_passengers; j++) {
-            if (passengers[j].state == BAGGAGE_DONE) {
-                passenger_id = j;
-                break;
-            }
+    while (true) {
+        int passenger_index = queue_pop(&security_queue);
+        if (passenger_index < 0) {
+            break;
         }
-        
-        if (passenger_id >= 0) {
-            passengers[passenger_id].state = SECURITY_SCREENING;
-            printf("[Security Screener #%d] Screening passenger #%d\n", 
-                   screener_id, passengers[passenger_id].id);
-            
-            usleep(100);
-            
-            passengers[passenger_id].state = SECURITY_DONE;
-            printf("[Security Screener #%d] Completed passenger #%d\n", 
-                   screener_id, passengers[passenger_id].id);
-        }
+
+        int passenger_id = passengers[passenger_index].id;
+
+        pthread_mutex_lock(&state_mutex);
+        passengers[passenger_index].state = SECURITY_SCREENING;
+        pthread_mutex_unlock(&state_mutex);
+
+        printf("[Security Screener #%d] Screening passenger #%d\n", screener_id, passenger_id);
+        usleep(100);
+
+        pthread_mutex_lock(&state_mutex);
+        passengers[passenger_index].state = SECURITY_DONE;
+        pthread_mutex_unlock(&state_mutex);
+
+        printf("[Security Screener #%d] Completed passenger #%d\n", screener_id, passenger_id);
+
+        sem_post(&passenger_sync[passenger_index].security_done);
+        sem_post(&security_screeners_available);
     }
     
     return NULL;
@@ -295,80 +278,38 @@ void* flight_attendant(void* arg) {
     int attendant_id = *(int*)arg;
     free(arg);
     
-    for (int i = 0; i < num_passengers; i++) {
-        // Find next passenger ready to board
-        int passenger_id = -1;
-        for (int j = 0; j < num_passengers; j++) {
-            if (passengers[j].state == SECURITY_DONE) {
-                passenger_id = j;
-                break;
-            }
+    while (true) {
+        int passenger_index = queue_pop(&boarding_queue);
+        if (passenger_index < 0) {
+            break;
         }
-        
-        if (passenger_id >= 0) {
-            passengers[passenger_id].state = BOARDING;
-            printf("[Flight Attendant #%d] Boarding passenger #%d\n", 
-                   attendant_id, passengers[passenger_id].id);
-            
-            usleep(100);
-            
-            passengers[passenger_id].state = SEATED;
-            printf("[Flight Attendant #%d] Passenger #%d is seated\n", 
-                   attendant_id, passengers[passenger_id].id);
-            
-            /*
-             * UPDATE GLOBAL COUNTER:
-             * 
-             * MUTEX PROTECTION:
-             * - Multiple attendants update passengers_seated
-             * - Race condition without synchronization
-             * - Mutex ensures atomic read-modify-write
-             * 
-             * HARDWARE EXECUTION:
-             * 
-             * pthread_mutex_lock(&counter_mutex):
-             * 1. FAST PATH (uncontended):
-             *    - Atomic CAS: LOCK CMPXCHG [mutex], thread_id
-             *    - If successful: continue (20-50 cycles)
-             *    - Cache line enters "Exclusive" state
-             * 
-             * 2. SLOW PATH (contended):
-             *    - Spin briefly (adaptive mutex)
-             *    - futex(FUTEX_LOCK_PI) syscall
-             *    - Kernel blocks thread
-             *    - Priority inheritance prevents inversion
-             * 
-             * CRITICAL SECTION:
-             * - passengers_seated++ is NOT atomic
-             * - Without mutex: lost updates possible
-             * - Example race:
-             *   Thread A reads 10
-             *   Thread B reads 10
-             *   Thread A writes 11
-             *   Thread B writes 11 (should be 12!)
-             * 
-             * MEMORY ORDERING:
-             * - Mutex provides acquire/release semantics
-             * - Acquire: all loads after lock see latest values
-             * - Release: all stores before unlock visible to others
-             */
-            pthread_mutex_lock(&counter_mutex);
-            passengers_seated++;
-            
-            /*
-             * CHECK COMPLETION:
-             * 
-             * When last passenger seated:
-             * - Signal main thread via semaphore
-             * - Main thread waits for this signal
-             * - Demonstrates barrier synchronization
-             */
-            if (passengers_seated == num_passengers) {
-                printf("\n=== All passengers seated! Plane ready for takeoff ===\n");
-                sem_post(&all_seated_sem);
-            }
-            pthread_mutex_unlock(&counter_mutex);
+
+        int passenger_id = passengers[passenger_index].id;
+
+        pthread_mutex_lock(&state_mutex);
+        passengers[passenger_index].state = BOARDING;
+        pthread_mutex_unlock(&state_mutex);
+
+        printf("[Flight Attendant #%d] Boarding passenger #%d\n", attendant_id, passenger_id);
+        usleep(100);
+
+        pthread_mutex_lock(&state_mutex);
+        passengers[passenger_index].state = SEATED;
+        pthread_mutex_unlock(&state_mutex);
+
+        printf("[Flight Attendant #%d] Passenger #%d is seated\n", attendant_id, passenger_id);
+
+        sem_post(&passenger_sync[passenger_index].boarded);
+
+        pthread_mutex_lock(&counter_mutex);
+        passengers_seated++;
+        if (passengers_seated == num_passengers) {
+            printf("\n=== All passengers seated! Plane ready for takeoff ===\n");
+            sem_post(&all_seated_sem);
         }
+        pthread_mutex_unlock(&counter_mutex);
+
+        sem_post(&attendants_available);
     }
     
     return NULL;
@@ -387,7 +328,10 @@ void* passenger_thread(void* arg) {
     free(arg);
     
     printf("Passenger #%d arrived at the terminal.\n", passenger_id);
-    passengers[passenger_id].state = ARRIVED;
+    int passenger_index = passenger_id - 1;
+    pthread_mutex_lock(&state_mutex);
+    passengers[passenger_index].state = ARRIVED;
+    pthread_mutex_unlock(&state_mutex);
     
     /*
      * STAGE 1: BAGGAGE PROCESSING
@@ -404,15 +348,10 @@ void* passenger_thread(void* arg) {
      * - Context switch to another thread
      * - Woken when handler finishes previous passenger
      */
-    printf("Passenger #%d is waiting at baggage processing.\n", passenger_id);
-    sem_wait(&baggage_sem);
-    
-    // Wait for baggage processing to complete
-    while (passengers[passenger_id].state != BAGGAGE_DONE) {
-        usleep(50);  // Polling with sleep (not ideal, but simple)
-    }
-    
-    sem_post(&baggage_sem);  // Release handler for next passenger
+    printf("Passenger #%d is waiting at baggage processing for a handler.\n", passenger_id);
+    sem_wait(&baggage_handlers_available);
+    queue_push(&baggage_queue, passenger_index);
+    sem_wait(&passenger_sync[passenger_index].baggage_done);
     
     /*
      * STAGE 2: SECURITY SCREENING
@@ -428,14 +367,10 @@ void* passenger_thread(void* arg) {
      * - MESI protocol ensures coherency
      * - Padding prevents false sharing
      */
-    printf("Passenger #%d is waiting to be screened.\n", passenger_id);
-    sem_wait(&security_sem);
-    
-    while (passengers[passenger_id].state != SECURITY_DONE) {
-        usleep(50);
-    }
-    
-    sem_post(&security_sem);
+    printf("Passenger #%d is waiting to be screened by a screener.\n", passenger_id);
+    sem_wait(&security_screeners_available);
+    queue_push(&security_queue, passenger_index);
+    sem_wait(&passenger_sync[passenger_index].security_done);
     
     /*
      * STAGE 3: BOARDING
@@ -445,15 +380,11 @@ void* passenger_thread(void* arg) {
      * - Attendant seats passenger
      * - Updates global counter
      */
-    printf("Passenger #%d is waiting to board the plane.\n", passenger_id);
-    sem_wait(&attendant_sem);
-    
-    while (passengers[passenger_id].state != SEATED) {
-        usleep(50);
-    }
-    
+    printf("Passenger #%d is waiting to board the plane by an attendant.\n", passenger_id);
+    sem_wait(&attendants_available);
+    queue_push(&boarding_queue, passenger_index);
+    sem_wait(&passenger_sync[passenger_index].boarded);
     printf("Passenger #%d has been seated and relaxes.\n", passenger_id);
-    sem_post(&attendant_sem);
     
     return NULL;
 }
@@ -536,18 +467,22 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Mutex initialization failed\n");
         return EXIT_FAILURE;
     }
+    if (pthread_mutex_init(&state_mutex, NULL) != 0) {
+        fprintf(stderr, "Mutex initialization failed\n");
+        return EXIT_FAILURE;
+    }
     
-    if (sem_init(&baggage_sem, 0, num_baggage_handlers) != 0) {
+    if (sem_init(&baggage_handlers_available, 0, num_baggage_handlers) != 0) {
         fprintf(stderr, "Baggage semaphore initialization failed\n");
         return EXIT_FAILURE;
     }
     
-    if (sem_init(&security_sem, 0, num_security_screeners) != 0) {
+    if (sem_init(&security_screeners_available, 0, num_security_screeners) != 0) {
         fprintf(stderr, "Security semaphore initialization failed\n");
         return EXIT_FAILURE;
     }
     
-    if (sem_init(&attendant_sem, 0, num_flight_attendants) != 0) {
+    if (sem_init(&attendants_available, 0, num_flight_attendants) != 0) {
         fprintf(stderr, "Attendant semaphore initialization failed\n");
         return EXIT_FAILURE;
     }
@@ -576,6 +511,24 @@ int main(int argc, char* argv[]) {
      * - Scheduler balances load
      * - NUMA-aware placement improves performance
      */
+    if (queue_init(&baggage_queue, num_passengers) != 0 ||
+        queue_init(&security_queue, num_passengers) != 0 ||
+        queue_init(&boarding_queue, num_passengers) != 0) {
+        fprintf(stderr, "Queue initialization failed\n");
+        return EXIT_FAILURE;
+    }
+
+    passenger_sync = malloc(num_passengers * sizeof(passenger_sync_t));
+    if (!passenger_sync) {
+        fprintf(stderr, "Passenger sync allocation failed\n");
+        return EXIT_FAILURE;
+    }
+    for (int i = 0; i < num_passengers; i++) {
+        sem_init(&passenger_sync[i].baggage_done, 0, 0);
+        sem_init(&passenger_sync[i].security_done, 0, 0);
+        sem_init(&passenger_sync[i].boarded, 0, 0);
+    }
+
     pthread_t* baggage_threads = malloc(num_baggage_handlers * sizeof(pthread_t));
     pthread_t* security_threads = malloc(num_security_screeners * sizeof(pthread_t));
     pthread_t* attendant_threads = malloc(num_flight_attendants * sizeof(pthread_t));
@@ -630,6 +583,16 @@ int main(int argc, char* argv[]) {
      * - Last attendant calls sem_post() to wake main
      */
     sem_wait(&all_seated_sem);
+
+    for (int i = 0; i < num_baggage_handlers; i++) {
+        queue_push(&baggage_queue, -1);
+    }
+    for (int i = 0; i < num_security_screeners; i++) {
+        queue_push(&security_queue, -1);
+    }
+    for (int i = 0; i < num_flight_attendants; i++) {
+        queue_push(&boarding_queue, -1);
+    }
     
     /*
      * JOIN ALL THREADS:
@@ -659,11 +622,23 @@ int main(int argc, char* argv[]) {
     
     // Cleanup
     pthread_mutex_destroy(&counter_mutex);
-    sem_destroy(&baggage_sem);
-    sem_destroy(&security_sem);
-    sem_destroy(&attendant_sem);
+    pthread_mutex_destroy(&state_mutex);
+    sem_destroy(&baggage_handlers_available);
+    sem_destroy(&security_screeners_available);
+    sem_destroy(&attendants_available);
     sem_destroy(&all_seated_sem);
-    
+
+    for (int i = 0; i < num_passengers; i++) {
+        sem_destroy(&passenger_sync[i].baggage_done);
+        sem_destroy(&passenger_sync[i].security_done);
+        sem_destroy(&passenger_sync[i].boarded);
+    }
+
+    queue_destroy(&baggage_queue);
+    queue_destroy(&security_queue);
+    queue_destroy(&boarding_queue);
+
+    free(passenger_sync);
     free(passengers);
     free(baggage_threads);
     free(security_threads);

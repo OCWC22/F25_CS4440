@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 
 /*
  * PASSENGER STATE MACHINE:

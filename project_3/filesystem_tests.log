@@ -1,0 +1,251 @@
+===============================================
+COMPREHENSIVE TESTS: FILESYSTEM SERVER/CLIENT
+===============================================
+
+🔧 BUILDING PROGRAMS...
+✅ Build successful
+
+📋 TEST 1: FILESYSTEM SERVER SETUP
+---------------------------------
+Test 1a: Starting disk server
+[disk_server][98598][main] main: argc=6
+[disk_server][98598][main] parsed args: port=8082 cylinders=8 sectors_per_cyl=8 track_time_us=1000 file=fs_test_disk.img
+Test 1b: Starting filesystem server
+Command: ./fs_server 127.0.0.1 8082 8083
+Error: Ports below 1024 require root privileges
+Please use a port between 1024 and 65535
+✅ Filesystem server started successfully
+
+📋 TEST 2: BASIC FILE OPERATIONS
+--------------------------------
+Test 2a: Create a file (MK)
+Input: MK test1.txt
+[fs_client][98609][main] main: argc=3
+connect: Connection refused
+
+Test 2b: Write to file (WRITE)
+Input: WRITE test1.txt 0 hello world
+[fs_client][98611][main] main: argc=3
+connect: Connection refused
+
+Test 2c: Read from file (READ)
+Input: READ test1.txt 0 11
+[fs_client][98613][main] main: argc=3
+connect: Connection refused
+
+Test 2d: List directory (LS)
+Input: LS
+[fs_client][98615][main] main: argc=3
+connect: Connection refused
+
+Test 2e: Create another file
+Input: MK test2.txt
+[fs_client][98617][main] main: argc=3
+connect: Connection refused
+
+Test 2f: Write to second file
+Input: WRITE test2.txt 0 second file
+[fs_client][98619][main] main: argc=3
+connect: Connection refused
+
+Test 2g: List directory again
+Input: LS
+[fs_client][98621][main] main: argc=3
+connect: Connection refused
+
+📋 TEST 3: DIRECTORY OPERATIONS
+------------------------------
+Test 3a: Create directory (MKDIR)
+Input: MKDIR testdir
+[fs_client][98623][main] main: argc=3
+connect: Connection refused
+
+Test 3b: List directory to see new dir
+Input: LS
+[fs_client][98625][main] main: argc=3
+connect: Connection refused
+
+Test 3c: Create file in directory
+Input: MK testdir/file1.txt
+[fs_client][98627][main] main: argc=3
+connect: Connection refused
+
+Test 3d: Write to file in subdirectory
+Input: WRITE testdir/file1.txt 0 content in subdir
+[fs_client][98629][main] main: argc=3
+connect: Connection refused
+
+Test 3e: Read file from subdirectory
+Input: READ testdir/file1.txt 0 20
+[fs_client][98631][main] main: argc=3
+connect: Connection refused
+
+Test 3f: List subdirectory
+Input: LS testdir
+[fs_client][98633][main] main: argc=3
+connect: Connection refused
+
+📋 TEST 4: FILE MANIPULATION
+----------------------------
+Test 4a: Append to file
+Input: WRITE test1.txt 11 more data
+[fs_client][98635][main] main: argc=3
+connect: Connection refused
+
+Test 4b: Read entire file
+Input: READ test1.txt 0 21
+[fs_client][98637][main] main: argc=3
+connect: Connection refused
+
+Test 4c: Write in middle of file
+Input: WRITE test1.txt 6 INSERTED
+[fs_client][98639][main] main: argc=3
+connect: Connection refused
+
+Test 4d: Read modified file
+Input: READ test1.txt 0 21
+[fs_client][98641][main] main: argc=3
+connect: Connection refused
+
+Test 4e: Create large file
+Input: MK largefile.txt
+[fs_client][98643][main] main: argc=3
+connect: Connection refused
+
+Input: WRITE largefile.txt 0 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+[fs_client][98647][main] main: argc=3
+connect: Connection refused
+
+Input: READ largefile.txt 0 200
+[fs_client][98649][main] main: argc=3
+connect: Connection refused
+(Showing first line only)
+
+📋 TEST 5: ERROR HANDLING
+-------------------------
+Test 5a: Create file with invalid name (too long)
+Input: MK AAAAAAAAAAAAAAAAAAAA.txt
+[fs_client][98654][main] main: argc=3
+connect: Connection refused
+
+Test 5b: Create file that already exists
+Input: MK test1.txt
+[fs_client][98656][main] main: argc=3
+connect: Connection refused
+
+Test 5c: Read non-existent file
+Input: READ nonexistent.txt 0 10
+[fs_client][98658][main] main: argc=3
+connect: Connection refused
+
+Test 5d: Write to non-existent file
+Input: WRITE nonexistent.txt 0 data
+[fs_client][98660][main] main: argc=3
+connect: Connection refused
+
+Test 5e: Delete non-existent file
+Input: RM nonexistent.txt
+[fs_client][98662][main] main: argc=3
+connect: Connection refused
+
+Test 5f: Read beyond file size
+Input: READ test1.txt 100 10
+[fs_client][98664][main] main: argc=3
+connect: Connection refused
+
+Test 5g: Create directory with invalid name
+Input: MKDIR BBBBBBBBBBBBBBBBBBBB
+[fs_client][98668][main] main: argc=3
+connect: Connection refused
+
+📋 TEST 6: DELETE OPERATIONS
+---------------------------
+Test 6a: Delete file (RM)
+Input: RM test2.txt
+[fs_client][98670][main] main: argc=3
+connect: Connection refused
+
+Test 6b: List directory to confirm deletion
+Input: LS
+[fs_client][98672][main] main: argc=3
+connect: Connection refused
+
+Test 6c: Delete directory (RMDIR)
+Input: RMDIR testdir
+[fs_client][98674][main] main: argc=3
+connect: Connection refused
+
+Test 6d: List directory to confirm directory deletion
+Input: LS
+[fs_client][98676][main] main: argc=3
+connect: Connection refused
+
+📋 TEST 7: EDGE CASES
+---------------------
+Test 7a: Create empty file
+Input: MK empty.txt
+[fs_client][98678][main] main: argc=3
+connect: Connection refused
+
+Test 7b: Read empty file
+Input: READ empty.txt 0 10
+[fs_client][98680][main] main: argc=3
+connect: Connection refused
+
+Test 7c: Write to empty file
+Input: WRITE empty.txt 0 now has content
+[fs_client][98682][main] main: argc=3
+connect: Connection refused
+
+Test 7d: Read the file
+Input: READ empty.txt 0 15
+[fs_client][98684][main] main: argc=3
+connect: Connection refused
+
+Test 7e: File with special characters in name
+Input: MK file-with_special.chars
+[fs_client][98686][main] main: argc=3
+connect: Connection refused
+
+Test 7f: Write to file with special name
+Input: WRITE file-with_special.chars 0 special name test
+[fs_client][98689][main] main: argc=3
+connect: Connection refused
+
+Test 7g: Read file with special name
+Input: READ file-with_special.chars 0 16
+[fs_client][98691][main] main: argc=3
+connect: Connection refused
+
+📋 TEST 8: CONCURRENT OPERATIONS
+--------------------------------
+Launching 5 concurrent filesystem clients...
+✅ All concurrent clients completed successfully
+📋 TEST 9: SERVER ERROR HANDLING
+--------------------------------
+Test 9a: Filesystem server with no arguments
+Usage: ./fs_server <listen_port> <disk_ip> <disk_port>
+
+Test 9b: Filesystem server with insufficient arguments
+Usage: ./fs_server <listen_port> <disk_ip> <disk_port>
+
+Test 9c: Filesystem client with no arguments
+[fs_client][98706][main] main: argc=1
+Usage: ./fs_client <server-ip> <port>
+
+Test 9d: Filesystem client with insufficient arguments
+[fs_client][98708][main] main: argc=2
+Usage: ./fs_client <server-ip> <port>
+
+Test 9e: Client with invalid IP
+[fs_client][98711][main] main: argc=3
+inet_pton: Undefined error: 0
+
+Test 9f: Client connecting to non-existent server
+[fs_client][98714][main] main: argc=3
+connect: Connection refused
+
+
+===============================================
+✅ ALL FILESYSTEM SERVER/CLIENT TESTS COMPLETE
+=============================================

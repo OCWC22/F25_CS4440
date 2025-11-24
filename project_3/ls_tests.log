@@ -1,0 +1,580 @@
+===============================================
+COMPREHENSIVE TESTS: LS SERVER/CLIENT
+===============================================
+
+🔧 BUILDING PROGRAMS...
+✅ Build successful
+
+📋 TEST 1: NORMAL OPERATION - Various ls commands
+-------------------------------------------------
+[ls_server][97519][main] main: argc=2
+Test 1a: ls with -l flag (detailed listing)
+Input: -l /tmp
+[ls_client][97625][main] main: argc=5
+[ls_server][97519][handle_client] handle_client: clientfd=4
+[ls_server][97519][read_line] read_line: fd=4 maxlen=1024
+lrwxr-xr-x@ 1 root  wheel  11 Aug 16 11:44 /tmp -> private/tmp
+
+Test 1b: ls without flags (simple listing)
+Input: /tmp
+[ls_client][97632][main] main: argc=4
+[ls_server][97519][handle_client] handle_client: clientfd=4
+[ls_server][97519][read_line] read_line: fd=4 maxlen=1024
+CalNotificationsAvailable
+com.apple.CoreSimulator.SimDevice.021EE42D-7B99-48DB-B8CA-8CDA44B0AF9A
+com.apple.launchd.3zrA6kPMES
+com.apple.launchd.4qpjLzHmpK
+com.apple.launchd.ODgIUmzhdW
+com.apple.launchd.PrHHDYYvqO
+disk_test_complete.log
+disk_test_final.log
+disk_test_fixed.log
+disk_test_full.log
+disk_test_working.log
+disk_test.log
+lume_daemon.error.log
+lume_daemon.log
+mcp-daemon.sock
+powerlog
+tmp-mount-01lrdp
+tmp-mount-1wBgpb
+tmp-mount-3796Dq
+tmp-mount-A6N4yK
+tmp-mount-hITWin
+tmp-mount-IAQKE6
+tmp-mount-k1MKoJ
+tmp-mount-PoLb2x
+tmp-mount-Ro1Xiz
+tmp-mount-Ryi1RR
+tmp-mount-Vi4iv0
+tmp-mount-VnLGfS
+tmp-mount-vzq9EF
+tmp-mount-Xyqd2J
+tmp-mount-zBpqXI
+zeb_def_ipc_1842
+zeb_def_ipc_21514
+zeb_def_ipc_38573
+zeb_def_ipc_78767
+
+Test 1c: ls with -a flag (show all files)
+Input: -a /tmp
+[ls_client][97634][main] main: argc=5
+[ls_server][97519][handle_client] handle_client: clientfd=4
+[ls_server][97519][read_line] read_line: fd=4 maxlen=1024
+.
+..
+.s.PGSQL.5432
+.s.PGSQL.5432.lock
+CalNotificationsAvailable
+com.apple.CoreSimulator.SimDevice.021EE42D-7B99-48DB-B8CA-8CDA44B0AF9A
+com.apple.launchd.3zrA6kPMES
+com.apple.launchd.4qpjLzHmpK
+com.apple.launchd.ODgIUmzhdW
+com.apple.launchd.PrHHDYYvqO
+disk_test_complete.log
+disk_test_final.log
+disk_test_fixed.log
+disk_test_full.log
+disk_test_working.log
+disk_test.log
+lume_daemon.error.log
+lume_daemon.log
+mcp-daemon.sock
+powerlog
+tmp-mount-01lrdp
+tmp-mount-1wBgpb
+tmp-mount-3796Dq
+tmp-mount-A6N4yK
+tmp-mount-hITWin
+tmp-mount-IAQKE6
+tmp-mount-k1MKoJ
+tmp-mount-PoLb2x
+tmp-mount-Ro1Xiz
+tmp-mount-Ryi1RR
+tmp-mount-Vi4iv0
+tmp-mount-VnLGfS
+tmp-mount-vzq9EF
+tmp-mount-Xyqd2J
+tmp-mount-zBpqXI
+zeb_def_ipc_1842
+zeb_def_ipc_21514
+zeb_def_ipc_38573
+zeb_def_ipc_78767
+
+Test 1d: ls with multiple flags
+Input: -la /tmp
+[ls_client][97636][main] main: argc=5
+[ls_server][97519][handle_client] handle_client: clientfd=4
+[ls_server][97519][read_line] read_line: fd=4 maxlen=1024
+lrwxr-xr-x@ 1 root  wheel  11 Aug 16 11:44 /tmp -> private/tmp
+
+Test 1e: ls current directory
+Input: .
+[ls_client][97638][main] main: argc=4
+[ls_server][97519][handle_client] handle_client: clientfd=4
+[ls_server][97519][read_line] read_line: fd=4 maxlen=1024
+comprehensive_test_disk.sh
+comprehensive_test_filesystem.sh
+comprehensive_test_ls.sh
+comprehensive_test_reverse.sh
+disk_client_cli
+disk_client_cli.c
+disk_client_random
+disk_client_random.c
+disk_server
+disk_server.c
+disk_tests_final.log
+disk_tests_with_logs.log
+fs_client
+fs_client.c
+fs_defs.h
+fs_server
+fs_server.c
+ls_client
+ls_client.c
+ls_server
+ls_server.c
+ls_tests.log
+Makefile
+README.md
+reverse_client
+reverse_client.c
+reverse_server
+reverse_server.c
+reverse_tests.log
+run_all_comprehensive_tests.sh
+TECHNICAL_REPORT.md
+test.img
+
+Test 1f: ls parent directory
+Input: ..
+[ls_client][97640][main] main: argc=4
+[ls_server][97519][handle_client] handle_client: clientfd=4
+[ls_server][97519][read_line] read_line: fd=4 maxlen=1024
+Abraham Silberschatz-Operating System Concepts (9th,2012_12).pdf
+bankers_algorithm_tutorial.md
+CEO_Technical_Bridge_Documentation.md
+classical_synchronization_problems.md
+cpu_os_visualization_guide.md
+docs
+EXECUTIVE_SUMMARY.md
+EXPLANATION.md
+hardware_architecture_guide.md
+midterm_prep
+os_synchronization_real_context.md
+Problems1-5
+project_1
+project_1.zip
+project_2
+project_2.zip
+project_3
+Project-2-Question-2-Michael-Ramos
+README.md
+real_world_synchronization_cpp.md
+real_world_synchronization_examples.md
+research
+simplified_synchronization_explained.cpp
+src
+synchronization_visualization.md
+week_1
+week_10
+week_13
+week_14
+week_2
+week_3
+week_5
+week_6
+week_7
+week_8
+week_9
+
+Test 1g: ls with multiple directories
+Input: /tmp /var
+[ls_client][97642][main] main: argc=5
+[ls_server][97519][handle_client] handle_client: clientfd=4
+[ls_server][97519][read_line] read_line: fd=4 maxlen=1024
+/tmp:
+CalNotificationsAvailable
+com.apple.CoreSimulator.SimDevice.021EE42D-7B99-48DB-B8CA-8CDA44B0AF9A
+com.apple.launchd.3zrA6kPMES
+com.apple.launchd.4qpjLzHmpK
+com.apple.launchd.ODgIUmzhdW
+com.apple.launchd.PrHHDYYvqO
+disk_test_complete.log
+disk_test_final.log
+disk_test_fixed.log
+disk_test_full.log
+disk_test_working.log
+disk_test.log
+lume_daemon.error.log
+lume_daemon.log
+mcp-daemon.sock
+powerlog
+tmp-mount-01lrdp
+tmp-mount-1wBgpb
+tmp-mount-3796Dq
+tmp-mount-A6N4yK
+tmp-mount-hITWin
+tmp-mount-IAQKE6
+tmp-mount-k1MKoJ
+tmp-mount-PoLb2x
+tmp-mount-Ro1Xiz
+tmp-mount-Ryi1RR
+tmp-mount-Vi4iv0
+tmp-mount-VnLGfS
+tmp-mount-vzq9EF
+tmp-mount-Xyqd2J
+tmp-mount-zBpqXI
+zeb_def_ipc_1842
+zeb_def_ipc_21514
+zeb_def_ipc_38573
+zeb_def_ipc_78767
+
+/var:
+agentx
+at
+audit
+backups
+containers
+db
+dextcores
+dirs_cleaner
+empty
+folders
+install
+jabberd
+lib
+log
+logs
+ma
+mail
+MobileSoftwareUpdate
+msgs
+netboot
+networkd
+OOPJit
+personalized_factory
+protected
+root
+rpc
+run
+select
+sntpd
+spool
+tmp
+vm
+yp
+
+📋 TEST 2: ERROR HANDLING - Invalid inputs
+-----------------------------------------
+Test 2a: Server with no arguments
+[ls_server][97646][main] main: argc=1
+Usage: ./ls_server <port>
+
+Test 2b: Server with invalid port
+[ls_server][97649][main] main: argc=2
+Error: Port must be between 1 and 65535
+Usage: ./ls_server <port>
+
+Test 2c: Client with no arguments
+[ls_client][97652][main] main: argc=1
+Usage: ./ls_client <server-ip> <port> [ls-args...]
+
+Test 2d: Client with insufficient arguments
+[ls_client][97655][main] main: argc=3
+connect: Connection refused
+
+Test 2e: Client with invalid IP
+[ls_client][97658][main] main: argc=4
+inet_pton: Undefined error: 0
+
+Test 2f: Client connecting to non-existent server
+[ls_client][97661][main] main: argc=4
+connect: Connection refused
+
+📋 TEST 3: EDGE CASES - Boundary conditions
+--------------------------------------------
+[ls_server][97662][main] main: argc=2
+Test 3a: ls non-existent directory
+Input: /nonexistent/directory
+[ls_client][97665][main] main: argc=4
+[ls_server][97662][handle_client] handle_client: clientfd=4
+[ls_server][97662][read_line] read_line: fd=4 maxlen=1024
+ls: /nonexistent/directory: No such file or directory
+
+Test 3b: ls empty directory
+Creating empty test directory...
+Input: /tmp/empty_test_dir
+[ls_client][97668][main] main: argc=4
+[ls_server][97662][handle_client] handle_client: clientfd=4
+[ls_server][97662][read_line] read_line: fd=4 maxlen=1024
+Cleaning up...
+
+Test 3c: ls with many flags
+Input: -lah /tmp
+[ls_client][97671][main] main: argc=5
+[ls_server][97662][handle_client] handle_client: clientfd=4
+[ls_server][97662][read_line] read_line: fd=4 maxlen=1024
+lrwxr-xr-x@ 1 root  wheel    11B Aug 16 11:44 /tmp -> private/tmp
+
+Test 3d: ls root directory
+Input: /
+[ls_client][97673][main] main: argc=4
+[ls_server][97662][handle_client] handle_client: clientfd=4
+[ls_server][97662][read_line] read_line: fd=4 maxlen=1024
+Applications
+bin
+cores
+dev
+etc
+home
+Library
+opt
+private
+sbin
+(Showing first 10 lines only)
+
+📋 TEST 4: CONCURRENT CLIENTS
+------------------------------
+[ls_server][97676][main] main: argc=2
+Launching 5 concurrent ls clients...
+[ls_server][97676][handle_client] handle_client: clientfd=4
+[ls_server][97676][read_line] read_line: fd=4 maxlen=1024
+[ls_server][97676][handle_client] handle_client: clientfd=4
+[ls_server][97676][read_line] read_line: fd=4 maxlen=1024
+[ls_server][97676][handle_client] handle_client: clientfd=4
+[ls_server][97676][read_line] read_line: fd=4 maxlen=1024
+[ls_server][97676][handle_client] handle_client: clientfd=4
+[ls_server][97676][read_line] read_line: fd=4 maxlen=1024
+[ls_server][97676][handle_client] handle_client: clientfd=4
+[ls_server][97676][read_line] read_line: fd=4 maxlen=1024
+✅ All concurrent clients completed successfully
+📋 TEST 5: STRESS TESTING
+-------------------------
+[ls_server][97692][main] main: argc=2
+Sending 50 rapid ls requests...
+➡️  Request 01: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 02: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 03: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 04: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 05: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 06: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 07: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 08: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 09: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 10: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 11: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 12: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 13: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 14: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 15: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 16: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 17: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 18: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 19: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 20: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 21: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 22: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 23: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 24: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 25: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 26: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 27: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 28: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 29: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 30: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 31: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 32: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 33: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 34: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 35: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 36: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 37: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 38: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 39: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 40: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 41: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 42: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 43: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 44: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 45: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 46: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 47: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 48: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 49: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+➡️  Request 50: ls /tmp
+[ls_server][97692][handle_client] handle_client: clientfd=4
+[ls_server][97692][read_line] read_line: fd=4 maxlen=1024
+    ↳ Exit: 0 | Lines:       36
+✅ Stress test completed - Success: 50, Failures: 0
+📋 TEST 6: FILE SYSTEM OPERATIONS
+----------------------------------
+[ls_server][97999][main] main: argc=2
+Test 6a: ls with file paths
+Creating test files...
+Input: /tmp/test_file1.txt
+[ls_client][98002][main] main: argc=4
+[ls_server][97999][handle_client] handle_client: clientfd=4
+[ls_server][97999][read_line] read_line: fd=4 maxlen=1024
+/tmp/test_file1.txt
+
+Test 6b: ls with wildcards (should be handled by shell)
+Input: /tmp/test*
+[ls_client][98004][main] main: argc=5
+[ls_server][97999][handle_client] handle_client: clientfd=4
+[ls_server][97999][read_line] read_line: fd=4 maxlen=1024
+/tmp/test_file1.txt
+/tmp/test_file2.txt
+
+Cleaning up test files...
+
+===============================================
+✅ ALL LS SERVER/CLIENT TESTS COMPLETE
+=============================================

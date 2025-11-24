@@ -1,0 +1,628 @@
+===============================================
+COMPREHENSIVE TESTS: REVERSE SERVER/CLIENT
+===============================================
+
+🔧 BUILDING PROGRAMS...
+✅ Build successful
+
+📋 TEST 1: NORMAL OPERATION - Various string inputs
+---------------------------------------------------
+[reverse_server][96574][main] main: argc=2
+Reverse server listening on port 8080
+Test 1a: Simple string
+[reverse_client][96579][main] main: argc=3
+[reverse_server][96574][handle_client] handle_client: thread started
+[reverse_server][96574][reverse_string] reverse_string: input_len=5
+Enter a string to reverse: Reversed from server: olleh
+
+Test 1b: String with numbers
+[reverse_client][96581][main] main: argc=3
+[reverse_server][96574][handle_client] handle_client: thread started
+[reverse_server][96574][reverse_string] reverse_string: input_len=9
+Enter a string to reverse: Reversed from server: zyx321cba
+
+Test 1c: Empty string
+[reverse_client][96583][main] main: argc=3
+[reverse_server][96574][handle_client] handle_client: thread started
+[reverse_server][96574][reverse_string] reverse_string: input_len=0
+Enter a string to reverse: Reversed from server: 
+
+Test 1d: String with special characters
+[reverse_client][96585][main] main: argc=3
+[reverse_server][96574][handle_client] handle_client: thread started
+[reverse_server][96574][reverse_string] reverse_string: input_len=16
+Enter a string to reverse: Reversed from server: !321#dlrow@olleh
+
+Test 1e: Long string (near limit)
+[reverse_client][96587][main] main: argc=3
+[reverse_server][96574][handle_client] handle_client: thread started
+[reverse_server][96574][reverse_string] reverse_string: input_len=79
+Enter a string to reverse: Reversed from server: revres eht yb ylreporp desrever eb llits dluohs taht gnirts gnol yrev a si siht
+
+📋 TEST 2: ERROR HANDLING - Invalid inputs
+-------------------------------------------
+Test 2a: Server with no arguments
+[reverse_server][96588][main] main: argc=1
+Usage: ./reverse_server <port>
+Program exited correctly
+
+Test 2b: Server with invalid port
+[reverse_server][96589][main] main: argc=2
+Error: Port must be between 1 and 65535
+Usage: ./reverse_server <port>
+Program exited correctly
+
+Test 2c: Client with no arguments
+[reverse_client][96590][main] main: argc=1
+Usage: ./reverse_client <server-ip> <port>
+Program exited correctly
+
+Test 2d: Client with insufficient arguments
+[reverse_client][96591][main] main: argc=2
+Usage: ./reverse_client <server-ip> <port>
+Program exited correctly
+
+Test 2e: Client with invalid IP
+[reverse_client][96594][main] main: argc=3
+inet_pton: Undefined error: 0
+Program exited correctly
+
+Test 2f: Client connecting to non-existent server
+[reverse_client][96597][main] main: argc=3
+connect: Connection refused
+Program exited correctly
+
+📋 TEST 3: EDGE CASES - Boundary conditions
+--------------------------------------------
+[reverse_server][96598][main] main: argc=2
+Test 3a: Single character
+[reverse_client][96602][main] main: argc=3
+[reverse_server][96598][handle_client] handle_client: thread started
+[reverse_server][96598][reverse_string] reverse_string: input_len=1
+Enter a string to reverse: Reversed from server: a
+
+Test 3b: String with only spaces
+[reverse_client][96604][main] main: argc=3
+[reverse_server][96598][handle_client] handle_client: thread started
+[reverse_server][96598][reverse_string] reverse_string: input_len=3
+Enter a string to reverse: Reversed from server:    
+
+Test 3c: String with newlines and tabs
+[reverse_client][96606][main] main: argc=3
+[reverse_server][96598][handle_client] handle_client: thread started
+[reverse_server][96598][reverse_string] reverse_string: input_len=5
+Enter a string to reverse: Reversed from server: olleh
+
+Test 3d: Unicode characters
+[reverse_client][96608][main] main: argc=3
+[reverse_server][96598][handle_client] handle_client: thread started
+[reverse_server][96598][reverse_string] reverse_string: input_len=13
+Enter a string to reverse: Reversed from server: dlr��w oll��h
+
+📋 TEST 4: CONCURRENT CLIENTS
+-------------------------------
+[reverse_server][96609][main] main: argc=2
+Launching 3 concurrent clients...
+[reverse_client][96618][main] main: argc=3
+[reverse_client][96614][main] main: argc=3
+[reverse_client][96616][main] main: argc=3
+[reverse_server][96609][handle_client] handle_client: thread started
+[reverse_server][96609][reverse_string] reverse_string: input_len=7
+[reverse_server][96609][handle_client] handle_client: thread started
+[reverse_server][96609][reverse_string] reverse_string: input_len=7
+[reverse_server][96609][handle_client] handle_client: thread started
+[reverse_server][96609][reverse_string] reverse_string: input_len=7
+Enter a string to reverse: Reversed from server: 1tneilc
+Enter a string to reverse: Reversed from server: 3tneilc
+Enter a string to reverse: Reversed from server: 2tneilc
+✅ All concurrent clients completed successfully
+📋 TEST 5: STRESS TESTING
+-------------------------
+[reverse_server][96619][main] main: argc=2
+Reverse server listening on port 8080
+Sending 100 rapid requests...
+➡️  Request 001 (test1)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96627][main] main: argc=3
+Enter a string to reverse: Reversed from server: 1tset
+➡️  Request 002 (test2)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96630][main] main: argc=3
+Enter a string to reverse: Reversed from server: 2tset
+➡️  Request 003 (test3)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96633][main] main: argc=3
+Enter a string to reverse: Reversed from server: 3tset
+➡️  Request 004 (test4)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96636][main] main: argc=3
+Enter a string to reverse: Reversed from server: 4tset
+➡️  Request 005 (test5)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96639][main] main: argc=3
+Enter a string to reverse: Reversed from server: 5tset
+➡️  Request 006 (test6)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96642][main] main: argc=3
+Enter a string to reverse: Reversed from server: 6tset
+➡️  Request 007 (test7)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96645][main] main: argc=3
+Enter a string to reverse: Reversed from server: 7tset
+➡️  Request 008 (test8)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96648][main] main: argc=3
+Enter a string to reverse: Reversed from server: 8tset
+➡️  Request 009 (test9)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=5
+    ↳ Exit: 0 | Response: [reverse_client][96651][main] main: argc=3
+Enter a string to reverse: Reversed from server: 9tset
+➡️  Request 010 (test10)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96654][main] main: argc=3
+Enter a string to reverse: Reversed from server: 01tset
+➡️  Request 011 (test11)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96657][main] main: argc=3
+Enter a string to reverse: Reversed from server: 11tset
+➡️  Request 012 (test12)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96660][main] main: argc=3
+Enter a string to reverse: Reversed from server: 21tset
+➡️  Request 013 (test13)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96663][main] main: argc=3
+Enter a string to reverse: Reversed from server: 31tset
+➡️  Request 014 (test14)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96666][main] main: argc=3
+Enter a string to reverse: Reversed from server: 41tset
+➡️  Request 015 (test15)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96669][main] main: argc=3
+Enter a string to reverse: Reversed from server: 51tset
+➡️  Request 016 (test16)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96672][main] main: argc=3
+Enter a string to reverse: Reversed from server: 61tset
+➡️  Request 017 (test17)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96675][main] main: argc=3
+Enter a string to reverse: Reversed from server: 71tset
+➡️  Request 018 (test18)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96678][main] main: argc=3
+Enter a string to reverse: Reversed from server: 81tset
+➡️  Request 019 (test19)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96681][main] main: argc=3
+Enter a string to reverse: Reversed from server: 91tset
+➡️  Request 020 (test20)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96684][main] main: argc=3
+Enter a string to reverse: Reversed from server: 02tset
+➡️  Request 021 (test21)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96687][main] main: argc=3
+Enter a string to reverse: Reversed from server: 12tset
+➡️  Request 022 (test22)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96690][main] main: argc=3
+Enter a string to reverse: Reversed from server: 22tset
+➡️  Request 023 (test23)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96693][main] main: argc=3
+Enter a string to reverse: Reversed from server: 32tset
+➡️  Request 024 (test24)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96696][main] main: argc=3
+Enter a string to reverse: Reversed from server: 42tset
+➡️  Request 025 (test25)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96699][main] main: argc=3
+Enter a string to reverse: Reversed from server: 52tset
+➡️  Request 026 (test26)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96702][main] main: argc=3
+Enter a string to reverse: Reversed from server: 62tset
+➡️  Request 027 (test27)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96705][main] main: argc=3
+Enter a string to reverse: Reversed from server: 72tset
+➡️  Request 028 (test28)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96708][main] main: argc=3
+Enter a string to reverse: Reversed from server: 82tset
+➡️  Request 029 (test29)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96711][main] main: argc=3
+Enter a string to reverse: Reversed from server: 92tset
+➡️  Request 030 (test30)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96714][main] main: argc=3
+Enter a string to reverse: Reversed from server: 03tset
+➡️  Request 031 (test31)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96717][main] main: argc=3
+Enter a string to reverse: Reversed from server: 13tset
+➡️  Request 032 (test32)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96720][main] main: argc=3
+Enter a string to reverse: Reversed from server: 23tset
+➡️  Request 033 (test33)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96723][main] main: argc=3
+Enter a string to reverse: Reversed from server: 33tset
+➡️  Request 034 (test34)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96726][main] main: argc=3
+Enter a string to reverse: Reversed from server: 43tset
+➡️  Request 035 (test35)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96729][main] main: argc=3
+Enter a string to reverse: Reversed from server: 53tset
+➡️  Request 036 (test36)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96732][main] main: argc=3
+Enter a string to reverse: Reversed from server: 63tset
+➡️  Request 037 (test37)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96735][main] main: argc=3
+Enter a string to reverse: Reversed from server: 73tset
+➡️  Request 038 (test38)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96738][main] main: argc=3
+Enter a string to reverse: Reversed from server: 83tset
+➡️  Request 039 (test39)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96741][main] main: argc=3
+Enter a string to reverse: Reversed from server: 93tset
+➡️  Request 040 (test40)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96744][main] main: argc=3
+Enter a string to reverse: Reversed from server: 04tset
+➡️  Request 041 (test41)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96747][main] main: argc=3
+Enter a string to reverse: Reversed from server: 14tset
+➡️  Request 042 (test42)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96750][main] main: argc=3
+Enter a string to reverse: Reversed from server: 24tset
+➡️  Request 043 (test43)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96753][main] main: argc=3
+Enter a string to reverse: Reversed from server: 34tset
+➡️  Request 044 (test44)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96756][main] main: argc=3
+Enter a string to reverse: Reversed from server: 44tset
+➡️  Request 045 (test45)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96759][main] main: argc=3
+Enter a string to reverse: Reversed from server: 54tset
+➡️  Request 046 (test46)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96762][main] main: argc=3
+Enter a string to reverse: Reversed from server: 64tset
+➡️  Request 047 (test47)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96765][main] main: argc=3
+Enter a string to reverse: Reversed from server: 74tset
+➡️  Request 048 (test48)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96768][main] main: argc=3
+Enter a string to reverse: Reversed from server: 84tset
+➡️  Request 049 (test49)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96771][main] main: argc=3
+Enter a string to reverse: Reversed from server: 94tset
+➡️  Request 050 (test50)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96774][main] main: argc=3
+Enter a string to reverse: Reversed from server: 05tset
+➡️  Request 051 (test51)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96777][main] main: argc=3
+Enter a string to reverse: Reversed from server: 15tset
+➡️  Request 052 (test52)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96780][main] main: argc=3
+Enter a string to reverse: Reversed from server: 25tset
+➡️  Request 053 (test53)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96783][main] main: argc=3
+Enter a string to reverse: Reversed from server: 35tset
+➡️  Request 054 (test54)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96786][main] main: argc=3
+Enter a string to reverse: Reversed from server: 45tset
+➡️  Request 055 (test55)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96789][main] main: argc=3
+Enter a string to reverse: Reversed from server: 55tset
+➡️  Request 056 (test56)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96792][main] main: argc=3
+Enter a string to reverse: Reversed from server: 65tset
+➡️  Request 057 (test57)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96795][main] main: argc=3
+Enter a string to reverse: Reversed from server: 75tset
+➡️  Request 058 (test58)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96798][main] main: argc=3
+Enter a string to reverse: Reversed from server: 85tset
+➡️  Request 059 (test59)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96801][main] main: argc=3
+Enter a string to reverse: Reversed from server: 95tset
+➡️  Request 060 (test60)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96804][main] main: argc=3
+Enter a string to reverse: Reversed from server: 06tset
+➡️  Request 061 (test61)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96807][main] main: argc=3
+Enter a string to reverse: Reversed from server: 16tset
+➡️  Request 062 (test62)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96810][main] main: argc=3
+Enter a string to reverse: Reversed from server: 26tset
+➡️  Request 063 (test63)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96813][main] main: argc=3
+Enter a string to reverse: Reversed from server: 36tset
+➡️  Request 064 (test64)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96816][main] main: argc=3
+Enter a string to reverse: Reversed from server: 46tset
+➡️  Request 065 (test65)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96819][main] main: argc=3
+Enter a string to reverse: Reversed from server: 56tset
+➡️  Request 066 (test66)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96822][main] main: argc=3
+Enter a string to reverse: Reversed from server: 66tset
+➡️  Request 067 (test67)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96825][main] main: argc=3
+Enter a string to reverse: Reversed from server: 76tset
+➡️  Request 068 (test68)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96828][main] main: argc=3
+Enter a string to reverse: Reversed from server: 86tset
+➡️  Request 069 (test69)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96831][main] main: argc=3
+Enter a string to reverse: Reversed from server: 96tset
+➡️  Request 070 (test70)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96834][main] main: argc=3
+Enter a string to reverse: Reversed from server: 07tset
+➡️  Request 071 (test71)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96837][main] main: argc=3
+Enter a string to reverse: Reversed from server: 17tset
+➡️  Request 072 (test72)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96840][main] main: argc=3
+Enter a string to reverse: Reversed from server: 27tset
+➡️  Request 073 (test73)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96843][main] main: argc=3
+Enter a string to reverse: Reversed from server: 37tset
+➡️  Request 074 (test74)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96846][main] main: argc=3
+Enter a string to reverse: Reversed from server: 47tset
+➡️  Request 075 (test75)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96849][main] main: argc=3
+Enter a string to reverse: Reversed from server: 57tset
+➡️  Request 076 (test76)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96852][main] main: argc=3
+Enter a string to reverse: Reversed from server: 67tset
+➡️  Request 077 (test77)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96855][main] main: argc=3
+Enter a string to reverse: Reversed from server: 77tset
+➡️  Request 078 (test78)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96858][main] main: argc=3
+Enter a string to reverse: Reversed from server: 87tset
+➡️  Request 079 (test79)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96861][main] main: argc=3
+Enter a string to reverse: Reversed from server: 97tset
+➡️  Request 080 (test80)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96864][main] main: argc=3
+Enter a string to reverse: Reversed from server: 08tset
+➡️  Request 081 (test81)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96867][main] main: argc=3
+Enter a string to reverse: Reversed from server: 18tset
+➡️  Request 082 (test82)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96870][main] main: argc=3
+Enter a string to reverse: Reversed from server: 28tset
+➡️  Request 083 (test83)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96873][main] main: argc=3
+Enter a string to reverse: Reversed from server: 38tset
+➡️  Request 084 (test84)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96876][main] main: argc=3
+Enter a string to reverse: Reversed from server: 48tset
+➡️  Request 085 (test85)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96879][main] main: argc=3
+Enter a string to reverse: Reversed from server: 58tset
+➡️  Request 086 (test86)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96882][main] main: argc=3
+Enter a string to reverse: Reversed from server: 68tset
+➡️  Request 087 (test87)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96885][main] main: argc=3
+Enter a string to reverse: Reversed from server: 78tset
+➡️  Request 088 (test88)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96888][main] main: argc=3
+Enter a string to reverse: Reversed from server: 88tset
+➡️  Request 089 (test89)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96891][main] main: argc=3
+Enter a string to reverse: Reversed from server: 98tset
+➡️  Request 090 (test90)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96894][main] main: argc=3
+Enter a string to reverse: Reversed from server: 09tset
+➡️  Request 091 (test91)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96897][main] main: argc=3
+Enter a string to reverse: Reversed from server: 19tset
+➡️  Request 092 (test92)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96900][main] main: argc=3
+Enter a string to reverse: Reversed from server: 29tset
+➡️  Request 093 (test93)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96903][main] main: argc=3
+Enter a string to reverse: Reversed from server: 39tset
+➡️  Request 094 (test94)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96906][main] main: argc=3
+Enter a string to reverse: Reversed from server: 49tset
+➡️  Request 095 (test95)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96909][main] main: argc=3
+Enter a string to reverse: Reversed from server: 59tset
+➡️  Request 096 (test96)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96912][main] main: argc=3
+Enter a string to reverse: Reversed from server: 69tset
+➡️  Request 097 (test97)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96915][main] main: argc=3
+Enter a string to reverse: Reversed from server: 79tset
+➡️  Request 098 (test98)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96918][main] main: argc=3
+Enter a string to reverse: Reversed from server: 89tset
+➡️  Request 099 (test99)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=6
+    ↳ Exit: 0 | Response: [reverse_client][96921][main] main: argc=3
+Enter a string to reverse: Reversed from server: 99tset
+➡️  Request 100 (test100)
+[reverse_server][96619][handle_client] handle_client: thread started
+[reverse_server][96619][reverse_string] reverse_string: input_len=7
+    ↳ Exit: 0 | Response: [reverse_client][96924][main] main: argc=3
+Enter a string to reverse: Reversed from server: 001tset
+✅ Stress test completed - Success: 100, Failures: 0
+
+===============================================
+✅ ALL REVERSE SERVER/CLIENT TESTS COMPLETE
+=============================================

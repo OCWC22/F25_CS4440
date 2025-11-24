@@ -1,102 +1,235 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <errno.h>
-#include "fs_defs.h"
-
 /*
- * CS4440 Project 3: File System Server
- * Implements Parts 4 (Files) and 5 (Directories).
+ * fs_server.c
+ * Filesystem server implementing a FAT-based filesystem on top of disk storage.
+ * 
+ * This program demonstrates:
+ * 1. Multi-threaded TCP server architecture with pthreads
+ * 2. FAT (File Allocation Table) filesystem implementation
+ * 3. Directory and file management operations
+ * 4. Client-server protocol for filesystem operations
+ * 5. Thread synchronization with mutexes
+ * 6. Integration with underlying disk storage server
+ * 7. Robust error handling for all system calls
+ * 
+ * Architecture:
+ * - Tier 2 filesystem server built on top of Tier 1 disk server
+ * - Maintains FAT in memory for efficient block allocation
+ * - Provides hierarchical directory structure
+ * - Supports concurrent client operations with proper synchronization
+ * 
+ * Protocol Commands:
+ *   MK filename - Create new file
+ *   RM filename - Remove file
+ *   LS - List directory contents  
+ *   READ filename offset length - Read file data
+ *   WRITE filename offset data - Write file data
+ *   MKDIR dirname - Create directory
+ *   RMDIR dirname - Remove directory
+ * 
+ * Usage: ./fs_server <disk-ip> <disk-port> <fs-port>
+ * Example: ./fs_server 127.0.0.1 8082 8083
  */
 
-#define MAX_CLIENTS 20
-#define BUFFER_SIZE 4096
+#include <stdio.h>      // Standard I/O functions (printf, perror, fprintf)
+#include <stdlib.h>     // Memory allocation and conversion functions (atoi, EXIT_FAILURE)
+#include <string.h>     // String manipulation (strlen, memset, strcpy, strcmp)
+#include <unistd.h>     // UNIX system calls (close, recv, send)
+#include <pthread.h>    // POSIX threads (pthread_mutex, pthread_create)
+#include <arpa/inet.h>  // Internet address functions (inet_pton, htons)
+#include <netinet/in.h> // Internet protocol address structures (sockaddr_in)
+#include <sys/socket.h> // Socket API (socket, bind, listen, accept)
+#include <errno.h>      // Error number definitions (used by perror)
+#include "fs_defs.h"    // Filesystem data structures and constants
 
-// --- GLOBAL STATE ---
+#define MAX_CLIENTS 20   // Maximum number of concurrent client connections
+#define BUFFER_SIZE 4096 // Buffer size for network communication
 
-int disk_sock = -1;
-// Mutex to ensure only one thread sends/receives from the Disk Server at a time.
-// This serializes physical disk I/O to prevent protocol interleaving.
+#define LOG_ENABLED 1
+
+#if LOG_ENABLED
+#define LOGF(fmt, ...) \
+    fprintf(stderr, "[fs_server][%d][%s] " fmt "\n", getpid(), __func__, ##__VA_ARGS__)
+#else
+#define LOGF(fmt, ...) ((void)0)
+#endif
+
+/*
+ * ====================================================================
+ * GLOBAL FILESYSTEM STATE
+ * ====================================================================
+ * 
+ * These global variables represent the filesystem state that is shared
+ * across all client threads. Proper synchronization is required to
+ * maintain consistency in a multi-threaded environment.
+ */
+
+// Connection to underlying disk server (Tier 1)
+int disk_sock = -1;                      // Socket descriptor for disk server connection
+
+// Mutex for disk server operations
+// Serializes all disk I/O to prevent protocol interleaving issues
+// Only one thread can communicate with disk server at a time
 pthread_mutex_t disk_lock = PTHREAD_MUTEX_INITIALIZER;
 
-// Mutex to protect the shared File Allocation Table (FAT) in memory.
-// Prevents race conditions when two clients try to allocate blocks simultaneously.
+// Mutex for filesystem metadata operations
+// Protects FAT and directory structures from concurrent modifications
+// Ensures filesystem consistency during parallel operations
 pthread_mutex_t fs_lock = PTHREAD_MUTEX_INITIALIZER;
-int cylinders, sectors_per_cyl;
-int total_blocks;
-int fat_blocks_count;
-int root_dir_block;
+
+// Disk geometry parameters (from disk server)
+int cylinders;                           // Number of cylinders on underlying disk
+int sectors_per_cyl;                     // Number of sectors per cylinder
+int total_blocks;                        // Total number of blocks available
+
+// Filesystem layout parameters
+int fat_blocks_count;                    // Number of blocks used for FAT storage
+int root_dir_block;                      // Block index where root directory starts
+
+// File Allocation Table (in memory)
+// Maps block indices to next block in file chain
+// FAT_FREE (0) = free block, FAT_EOF (0xFFFF) = end of file
 uint16_t *FAT = NULL;
 
-// --- DISK INTERFACE ---
+/*
+ * ====================================================================
+ * DISK SERVER INTERFACE LAYER
+ * ====================================================================
+ * 
+ * These functions provide an abstraction layer over the raw disk server.
+ * They handle the protocol communication and convert logical block numbers
+ * to physical cylinder/sector coordinates.
+ */
 
-// Establishes a TCP connection to the raw Disk Server (Tier 1).
-// Retrieves the disk geometry (Cylinders/Sectors) to initialize the FS.
+/*
+ * connect_to_disk - Establish connection to disk server and initialize filesystem
+ * @ip: IP address of the disk server
+ * @port: Port number of the disk server
+ * 
+ * This function:
+ * 1. Creates TCP connection to disk server
+ * 2. Queries disk geometry using 'I' command
+ * 3. Calculates filesystem layout parameters
+ * 4. Initializes global filesystem state
+ * 
+ * The function exits on failure since the filesystem cannot operate
+ * without a working disk connection.
+ */
 void connect_to_disk(const char *ip, int port) {
-    struct sockaddr_in serv_addr;
+    struct sockaddr_in serv_addr;         // Server address structure
+    
+    // Create TCP socket for disk server communication
+    // AF_INET = IPv4, SOCK_STREAM = TCP, 0 = default protocol
     if ((disk_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Disk socket creation error");
         exit(EXIT_FAILURE);
     }
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port);
+    
+    // Set up server address structure
+    serv_addr.sin_family = AF_INET;       // IPv4 address family
+    serv_addr.sin_port = htons(port);     // Convert port to network byte order
+    
+    // Convert IP address from text to binary form
+    // inet_pton returns 1 on success, 0 on invalid input, -1 on error
     if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0) {
         perror("Invalid disk address");
         exit(EXIT_FAILURE);
     }
+    
+    // Connect to the disk server
+    // This blocks until the connection is established or fails
     if (connect(disk_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("Connection to Disk Server failed");
         exit(EXIT_FAILURE);
     }
     
-    // Get Geometry
-    // We send 'I' to the disk to learn how big it is.
-    // This allows us to map logical block numbers (0..N) to Physical (Cylinder, Sector).
+    // Query disk geometry to determine filesystem capacity
+    // Send 'I' command to get cylinders and sectors per cylinder
     send(disk_sock, "I", 1, 0);
-    char buf[64] = {0};
+    
+    // Receive geometry response from disk server
+    char buf[64] = {0};                  // Buffer for geometry response
     recv(disk_sock, buf, 64, 0);
     
+    // Parse geometry: "cylinders sectors_per_cylinder"
     if (sscanf(buf, "%d %d", &cylinders, &sectors_per_cyl) != 2) {
         fprintf(stderr, "Failed to parse geometry: %s\n", buf);
         exit(EXIT_FAILURE);
     }
+    
+    // Calculate total available blocks
     total_blocks = cylinders * sectors_per_cyl;
+    
+    // Display connection information
     printf("[FS] Connected to Disk: %d Cyls, %d Sec/Cyl, Total Blocks: %d\n",
            cylinders, sectors_per_cyl, total_blocks);
 }
 
-// Helper: Reads a logical block by converting it to Cylinder/Sector.
-// Thread-safe due to disk_lock.
+/*
+ * disk_read - Read a logical block from the disk server
+ * @block_idx: Logical block index to read (0 to total_blocks-1)
+ * @buffer: Buffer to store the read block data (must be BLOCK_SIZE bytes)
+ * 
+ * This function:
+ * 1. Converts logical block index to cylinder/sector coordinates
+ * 2. Sends read command to disk server
+ * 3. Receives status response
+ * 4. Reads block data if successful, zeros buffer on error
+ * 5. Uses disk_lock to ensure thread safety
+ * 
+ * Thread-safe due to disk_lock mutex protection.
+ */
 void disk_read(int block_idx, char *buffer) {
+    // Acquire disk lock to prevent concurrent disk operations
     pthread_mutex_lock(&disk_lock);
-    int c = block_idx / sectors_per_cyl;
-    int s = block_idx % sectors_per_cyl;
+    
+    // Convert logical block index to physical coordinates
+    int cylinder = block_idx / sectors_per_cyl;  // Which cylinder contains this block
+    int sector = block_idx % sectors_per_cyl;    // Which sector within the cylinder
+    
+    // Format read command: "R cylinder sector"
     char cmd[64];
-    sprintf(cmd, "R %d %d\n", c, s);
+    sprintf(cmd, "R %d %d\n", cylinder, sector);
+    
+    // Send read command to disk server
     send(disk_sock, cmd, strlen(cmd), 0);
     
+    // Receive status response from disk server
     char status;
     recv(disk_sock, &status, 1, 0);
+    
     if (status == '1') {
-        int total = 0;
-        while(total < BLOCK_SIZE) {
-             int n = recv(disk_sock, buffer + total, BLOCK_SIZE - total, 0);
-             if (n <= 0) break;
-             total += n;
+        // Success: read the actual block data
+        // TCP may deliver partial data, so we loop until complete
+        int total_received = 0;
+        while (total_received < BLOCK_SIZE) {
+            int bytes = recv(disk_sock, buffer + total_received, 
+                           BLOCK_SIZE - total_received, 0);
+            if (bytes <= 0) break;          // Error or connection closed
+            total_received += bytes;
         }
     } else {
+        // Error: zero out the buffer
         memset(buffer, 0, BLOCK_SIZE);
     }
+    
+    // Release disk lock to allow other threads to use disk
     pthread_mutex_unlock(&disk_lock);
 }
 
-// Helper: Writes a logical block to Cylinder/Sector.
-// Thread-safe due to disk_lock.
+/*
+ * disk_write - Write a logical block to the disk server
+ * @block_idx: Logical block index to write (0 to total_blocks-1)
+ * @data: Buffer containing data to write (must be BLOCK_SIZE bytes)
+ * 
+ * This function:
+ * 1. Converts logical block index to cylinder/sector coordinates
+ * 2. Sends write command to disk server
+ * 3. Sends block data to disk server
+ * 4. Receives confirmation status
+ * 5. Uses disk_lock to ensure thread safety
+ * 
+ * Thread-safe due to disk_lock mutex protection.
+ */
 void disk_write(int block_idx, const char *data) {
     pthread_mutex_lock(&disk_lock);
     int c = block_idx / sectors_per_cyl;
@@ -563,6 +696,27 @@ int main(int argc, char *argv[]) {
     int listen_port = atoi(argv[1]);
     const char *disk_ip = argv[2];
     int disk_port = atoi(argv[3]);
+    
+    // Validate filesystem server port range
+    if (listen_port <= 0 || listen_port > 65535) {
+        fprintf(stderr, "Error: Listen port must be between 1 and 65535\n");
+        fprintf(stderr, "Usage: %s <listen_port> <disk_ip> <disk_port>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    
+    // Additional validation: ports below 1024 require root privileges
+    if (listen_port < 1024) {
+        fprintf(stderr, "Error: Ports below 1024 require root privileges\n");
+        fprintf(stderr, "Please use a port between 1024 and 65535\n");
+        return EXIT_FAILURE;
+    }
+    
+    // Validate disk port range
+    if (disk_port <= 0 || disk_port > 65535) {
+        fprintf(stderr, "Error: Disk port must be between 1 and 65535\n");
+        fprintf(stderr, "Usage: %s <listen_port> <disk_ip> <disk_port>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
     connect_to_disk(disk_ip, disk_port);
     init_fs_meta();

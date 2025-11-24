@@ -1,0 +1,468 @@
+===============================================
+COMPREHENSIVE TESTS: DISK SERVER/CLIENTS
+===============================================
+
+🔧 BUILDING PROGRAMS...
+✅ Build successful
+
+📋 TEST 1: DISK SERVER NORMAL OPERATION
+--------------------------------------
+Test 1a: Starting disk server with valid parameters
+Command: ./disk_server 8082 4 4 1000 test_disk.img
+[disk_server][92079][main] main: argc=6
+[disk_server][92079][main] parsed args: port=8082 cylinders=4 sectors_per_cyl=4 track_time_us=1000 file=test_disk.img
+✅ Disk server started successfully
+
+📋 TEST 2: DISK CLIENT CLI - ALL COMMANDS
+-----------------------------------------
+Test 2a: Info command (I)
+Input: I
+[disk_client_cli][92092][main] main: argc=3
+[disk_client_cli][92092][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92092][main] command I (info)
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command I (info)
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+> Disk geometry: 4 4
+
+Test 2b: Read invalid block (should fail)
+Input: R 10 10
+[disk_client_cli][92095][main] main: argc=3
+[disk_client_cli][92095][main] server_ip=127.0.0.1 port=8082
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92095][main] command R: c=10 s=10
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command R: cyl=10
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command R: sec=10
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+> 2 Invalid read (c or s out of range)
+
+Test 2c: Write valid block
+Input: W 0 0 hello world
+[disk_client_cli][92098][main] main: argc=3
+[disk_client_cli][92098][main] server_ip=127.0.0.1 port=8082
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92098][main] command W: c=0 s=0 len=5
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: cyl=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: sec=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: data_len=5
+[disk_server][92079][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92079][recv_all] recv_all: fd=4 len=5
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+> 0 Write OK.
+
+Test 2d: Read back the block we just wrote
+Input: R 0 0
+[disk_client_cli][92101][main] main: argc=3
+[disk_client_cli][92101][main] server_ip=127.0.0.1 port=8082
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_client_cli][92101][main] command R: c=0 s=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command R: cyl=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command R: sec=0
+[disk_server][92079][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92101][recv_all] recv_all: fd=3 len=128
+> 0 Read OK. First 128 bytes (printable chars / dots):
+world...........................................................................................................................
+
+Test 2e: Write to another block
+Input: W 1 0 test data 123
+[disk_client_cli][92104][main] main: argc=3
+[disk_client_cli][92104][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92104][main] command W: c=0 s=0 len=8
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: cyl=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: sec=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: data_len=8
+[disk_server][92079][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92079][recv_all] recv_all: fd=4 len=8
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+> 0 Write OK.
+
+Test 2f: Read the second block
+Input: R 1 0
+[disk_client_cli][92107][main] main: argc=3
+[disk_client_cli][92107][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92107][main] command R: c=1 s=0
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command R: cyl=1
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command R: sec=0
+[disk_server][92079][simulate_seek] simulate_seek: current=0 target=1
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92107][recv_all] recv_all: fd=3 len=128
+> 0 Read OK. First 128 bytes (printable chars / dots):
+................................................................................................................................
+
+Test 2g: Write with maximum data (128 bytes)
+Creating 128-byte test string...
+Input: W 2 0 [128 bytes of 'A']
+[disk_client_cli][92111][main] main: argc=3
+[disk_client_cli][92111][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92111][main] command W: c=0 s=0 len=0
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: cyl=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: sec=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command W: data_len=0
+[disk_server][92079][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+> 0 Write OK.
+
+Test 2h: Read back the 128-byte block
+Input: R 2 0
+[disk_client_cli][92114][main] main: argc=3
+[disk_client_cli][92114][main] server_ip=127.0.0.1 port=8082
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_client_cli][92114][main] command R: c=2 s=0
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command R: cyl=2
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_server][92079][handle_connection] command R: sec=0
+[disk_server][92079][simulate_seek] simulate_seek: current=0 target=2
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92114][recv_all] recv_all: fd=3 len=128
+> 0 Read OK. First 128 bytes (printable chars / dots):
+................................................................................................................................
+
+Test 2i: Quit command
+Input: q
+[disk_client_cli][92117][main] main: argc=3
+[disk_client_cli][92117][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92117][main] command q (quit)
+[disk_server][92079][handle_connection] handle_connection: clientfd=4
+[disk_server][92079][read_token] read_token: fd=4 maxlen=64
+
+📋 TEST 3: DISK CLIENT CLI - ERROR HANDLING
+-------------------------------------------
+Test 3a: Client with no arguments
+[disk_client_cli][92118][main] main: argc=1
+Usage: ./disk_client_cli <server-ip> <port>
+
+Test 3b: Client with insufficient arguments
+[disk_client_cli][92120][main] main: argc=2
+Usage: ./disk_client_cli <server-ip> <port>
+
+Test 3c: Client with invalid IP
+[disk_client_cli][92123][main] main: argc=3
+[disk_client_cli][92123][main] server_ip=invalid.ip port=8082
+inet_pton: Undefined error: 0
+
+Test 3d: Client connecting to non-existent server
+[disk_client_cli][92126][main] main: argc=3
+[disk_client_cli][92126][main] server_ip=127.0.0.1 port=9999
+connect: Connection refused
+
+📋 TEST 4: DISK SERVER ERROR HANDLING
+--------------------------------------
+Test 4a: Server with no arguments
+[disk_server][92128][main] main: argc=1
+Usage: ./disk_server <port> <cylinders> <sectors_per_cylinder> <track_time_us> <backing_file>
+
+Test 4b: Server with insufficient arguments
+[disk_server][92130][main] main: argc=2
+Usage: ./disk_server <port> <cylinders> <sectors_per_cylinder> <track_time_us> <backing_file>
+
+Test 4c: Server with invalid geometry
+[disk_server][92132][main] main: argc=6
+[disk_server][92132][main] parsed args: port=8082 cylinders=0 sectors_per_cyl=4 track_time_us=1000 file=test_disk.img
+Invalid cylinders or sectors.
+
+Test 4d: Server with invalid port
+[disk_server][92134][main] main: argc=6
+[disk_server][92134][main] parsed args: port=99999 cylinders=4 sectors_per_cyl=4 track_time_us=1000 file=test_disk.img
+Error: Port must be between 1 and 65535
+
+📋 TEST 5: RANDOM CLIENT - STRESS TESTING
+----------------------------------------
+Test 5a: Starting disk server
+[disk_server][92136][main] main: argc=6
+[disk_server][92136][main] parsed args: port=8082 cylinders=8 sectors_per_cyl=8 track_time_us=1000 file=test_disk2.img
+Test 5b: Random client with small number of operations
+Command: ./disk_client_random 127.0.0.1 8082 10 12345
+[disk_client_random][92143][main] main: argc=5
+[disk_client_random][92143][main] args: server_ip=127.0.0.1 port=8082 N=10 seed=12345
+[disk_client_random][92143][recv_line] recv_line: fd=3 maxlen=128
+[disk_server][92136][handle_connection] handle_connection: clientfd=4
+[disk_server][92136][read_token] read_token: fd=4 maxlen=64
+[disk_server][92136][handle_connection] command I (info)
+[disk_server][92136][read_token] read_token: fd=4 maxlen=64
+./comprehensive_test_disk.sh: line 14: 92143 Alarm clock: 14         perl -e '$s=shift; $SIG{ALRM}=sub{exit 124}; alarm $s; exec @ARGV;' "$seconds" "$@"
+
+Test 5c: Random client with medium number of operations
+Command: ./disk_client_random 127.0.0.1 8082 50 54321
+[disk_client_random][92261][main] main: argc=5
+[disk_client_random][92261][main] args: server_ip=127.0.0.1 port=8082 N=50 seed=54321
+[disk_client_random][92261][recv_line] recv_line: fd=3 maxlen=128
+[disk_server][92136][handle_connection] handle_connection: clientfd=4
+[disk_server][92136][read_token] read_token: fd=4 maxlen=64
+[disk_server][92136][handle_connection] command I (info)
+[disk_server][92136][read_token] read_token: fd=4 maxlen=64
+./comprehensive_test_disk.sh: line 14: 92261 Alarm clock: 14         perl -e '$s=shift; $SIG{ALRM}=sub{exit 124}; alarm $s; exec @ARGV;' "$seconds" "$@"
+
+Test 5d: Random client error - invalid N
+[disk_client_random][92635][main] main: argc=5
+[disk_client_random][92635][main] args: server_ip=127.0.0.1 port=8082 N=0 seed=12345
+N must be positive.
+
+Test 5e: Random client error - insufficient arguments
+[disk_client_random][92638][main] main: argc=3
+Usage: ./disk_client_random <server-ip> <port> <N> <seed>
+
+📋 TEST 6: EDGE CASES AND BOUNDARY CONDITIONS
+----------------------------------------------
+Test 6a: Very small disk (1x1)
+[disk_server][92639][main] main: argc=6
+[disk_server][92639][main] parsed args: port=8082 cylinders=1 sectors_per_cyl=1 track_time_us=1000 file=test_disk3.img
+Testing single block disk...
+[disk_client_cli][92770][main] main: argc=3
+[disk_client_cli][92770][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92770][main] command I (info)
+[disk_server][92639][handle_connection] handle_connection: clientfd=4
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_server][92639][handle_connection] command I (info)
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+> Disk geometry: 1 1
+[disk_client_cli][92773][main] main: argc=3
+[disk_client_cli][92773][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92773][main] command W: c=0 s=0 len=0
+[disk_server][92639][handle_connection] handle_connection: clientfd=4
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_server][92639][handle_connection] command W: cyl=0
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_server][92639][handle_connection] command W: sec=0
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_server][92639][handle_connection] command W: data_len=0
+[disk_server][92639][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+> 0 Write OK.
+[disk_client_cli][92776][main] main: argc=3
+[disk_client_cli][92776][main] server_ip=127.0.0.1 port=8082
+[disk_server][92639][handle_connection] handle_connection: clientfd=4
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92776][main] command R: c=0 s=0
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_server][92639][handle_connection] command R: cyl=0
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_server][92639][handle_connection] command R: sec=0
+[disk_server][92639][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92639][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92776][recv_all] recv_all: fd=3 len=128
+> 0 Read OK. First 128 bytes (printable chars / dots):
+................................................................................................................................
+
+Test 6b: Large disk geometry
+[disk_server][92777][main] main: argc=6
+[disk_server][92777][main] parsed args: port=8082 cylinders=100 sectors_per_cyl=100 track_time_us=1000 file=test_disk4.img
+Testing large disk geometry...
+[disk_client_cli][92783][main] main: argc=3
+[disk_client_cli][92783][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92783][main] command I (info)
+[disk_server][92777][handle_connection] handle_connection: clientfd=4
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+[disk_server][92777][handle_connection] command I (info)
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+> Disk geometry: 100 100
+[disk_client_cli][92786][main] main: argc=3
+[disk_client_cli][92786][main] server_ip=127.0.0.1 port=8082
+[disk_server][92777][handle_connection] handle_connection: clientfd=4
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92786][main] command W: c=0 s=0 len=0
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+[disk_server][92777][handle_connection] command W: cyl=0
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+[disk_server][92777][handle_connection] command W: sec=0
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+[disk_server][92777][handle_connection] command W: data_len=0
+[disk_server][92777][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+> 0 Write OK.
+[disk_client_cli][92789][main] main: argc=3
+[disk_client_cli][92789][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92789][main] command R: c=9999 s=0
+[disk_server][92777][handle_connection] handle_connection: clientfd=4
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+[disk_server][92777][handle_connection] command R: cyl=9999
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+[disk_server][92777][handle_connection] command R: sec=0
+[disk_server][92777][read_token] read_token: fd=4 maxlen=64
+> 2 Invalid read (c or s out of range)
+
+📋 TEST 7: CONCURRENT CLIENTS
+------------------------------
+[disk_server][92790][main] main: argc=6
+[disk_server][92790][main] parsed args: port=8082 cylinders=10 sectors_per_cyl=10 track_time_us=1000 file=test_disk5.img
+Launching 5 concurrent disk clients...
+[disk_server][92790][handle_connection] handle_connection: clientfd=4
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command R: cyl=1
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command R: sec=0
+[disk_server][92790][simulate_seek] simulate_seek: current=0 target=1
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] handle_connection: clientfd=4
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command I (info)
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] handle_connection: clientfd=4
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command R: cyl=0
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command R: sec=0
+[disk_server][92790][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] handle_connection: clientfd=4
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command W: cyl=0
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command W: sec=0
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command W: data_len=0
+[disk_server][92790][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] handle_connection: clientfd=4
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command W: cyl=0
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command W: sec=0
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+[disk_server][92790][handle_connection] command W: data_len=0
+[disk_server][92790][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92790][read_token] read_token: fd=4 maxlen=64
+✅ All concurrent clients completed successfully
+📋 TEST 8: DATA INTEGRITY
+-------------------------
+[disk_server][92817][main] main: argc=6
+[disk_server][92817][main] parsed args: port=8082 cylinders=4 sectors_per_cyl=4 track_time_us=1000 file=test_disk6.img
+Test 8a: Writing and reading binary data
+Creating binary test data...
+[disk_client_cli][92829][main] main: argc=3
+[disk_client_cli][92829][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92829][main] command W: c=0 s=0 len=0
+[disk_server][92817][handle_connection] handle_connection: clientfd=4
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: cyl=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: sec=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: data_len=0
+[disk_server][92817][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+> 0 Write OK.
+[disk_client_cli][92832][main] main: argc=3
+[disk_client_cli][92832][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92832][main] command R: c=3 s=0
+[disk_server][92817][handle_connection] handle_connection: clientfd=4
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command R: cyl=3
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command R: sec=0
+[disk_server][92817][simulate_seek] simulate_seek: current=0 target=3
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92832][recv_all] recv_all: fd=3 len=128
+> 0 Read OK. First 128 bytes (printable chars / dots):
+................................................................................................................................
+
+Test 8b: Writing with special characters
+[disk_client_cli][92835][main] main: argc=3
+[disk_client_cli][92835][main] server_ip=127.0.0.1 port=8082
+[disk_server][92817][handle_connection] handle_connection: clientfd=4
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92835][main] command W: c=1 s=0 len=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: cyl=1
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: sec=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: data_len=0
+[disk_server][92817][simulate_seek] simulate_seek: current=0 target=1
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+> 0 Write OK.
+[disk_client_cli][92838][main] main: argc=3
+[disk_client_cli][92838][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92838][main] command R: c=2 s=1
+[disk_server][92817][handle_connection] handle_connection: clientfd=4
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command R: cyl=2
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command R: sec=1
+[disk_server][92817][simulate_seek] simulate_seek: current=0 target=2
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92838][recv_all] recv_all: fd=3 len=128
+> 0 Read OK. First 128 bytes (printable chars / dots):
+................................................................................................................................
+
+Test 8c: Overwriting existing data
+[disk_client_cli][92841][main] main: argc=3
+[disk_client_cli][92841][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92841][main] command W: c=0 s=0 len=0
+[disk_server][92817][handle_connection] handle_connection: clientfd=4
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: cyl=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: sec=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command W: data_len=0
+[disk_server][92817][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+> 0 Write OK.
+[disk_client_cli][92844][main] main: argc=3
+[disk_client_cli][92844][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92844][main] command R: c=0 s=0
+[disk_server][92817][handle_connection] handle_connection: clientfd=4
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command R: cyl=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_server][92817][handle_connection] command R: sec=0
+[disk_server][92817][simulate_seek] simulate_seek: current=0 target=0
+[disk_server][92817][read_token] read_token: fd=4 maxlen=64
+[disk_client_cli][92844][recv_all] recv_all: fd=3 len=128
+./comprehensive_test_disk.sh: line 14: 92842 Alarm clock: 14         perl -e '$s=shift; $SIG{ALRM}=sub{exit 124}; alarm $s; exec @ARGV;' "$seconds" "$@"
+[disk_client_cli][92961][main] main: argc=3
+[disk_client_cli][92961][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][92961][main] command W: c=0 s=0 len=0
+./comprehensive_test_disk.sh: line 14: 92959 Alarm clock: 14         perl -e '$s=shift; $SIG{ALRM}=sub{exit 124}; alarm $s; exec @ARGV;' "$seconds" "$@"
+[disk_client_cli][93093][main] main: argc=3
+[disk_client_cli][93093][main] server_ip=127.0.0.1 port=8082
+[disk_client_cli][93093][main] command R: c=0 s=0
+./comprehensive_test_disk.sh: line 14: 93091 Alarm clock: 14         perl -e '$s=shift; $SIG{ALRM}=sub{exit 124}; alarm $s; exec @ARGV;' "$seconds" "$@"
+
+Error: expected 128 bytes but received 0 bytes from server.
+> 0 Read OK. First 128 bytes (printable chars / dots):
+recv: Connection reset by peer
+recv: Connection reset by peer
+
+===============================================
+✅ ALL DISK SERVER/CLIENT TESTS COMPLETE
+=============================================

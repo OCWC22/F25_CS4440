@@ -16,9 +16,19 @@
 
 #define BUFFER_SIZE 4096
 
+#define LOG_ENABLED 1
+
+#if LOG_ENABLED
+#define LOGF(fmt, ...) \
+    fprintf(stderr, "[fs_client][%d][%s] " fmt "\n", getpid(), __func__, ##__VA_ARGS__)
+#else
+#define LOGF(fmt, ...) ((void)0)
+#endif
+
 // Helper to guarantee we read exactly len bytes from the TCP stream,
 // since TCP is a byte stream and recv() may return partial chunks.
 static ssize_t recv_all(int fd, void *buf, size_t len) {
+    LOGF("recv_all: fd=%d len=%zu", fd, len);
     size_t done = 0;
     while (done < len) {
         ssize_t n = recv(fd, (char *)buf + done, len - done, 0);
@@ -33,6 +43,7 @@ static ssize_t recv_all(int fd, void *buf, size_t len) {
 }
 
 static void handle_read_command(int sockfd) {
+    LOGF("handle_read_command: sockfd=%d", sockfd);
     char header[64];
     size_t pos = 0;
     int spaces = 0;
@@ -126,6 +137,7 @@ static void handle_read_command(int sockfd) {
 }
 
 int main(int argc, char *argv[]) {
+    LOGF("main: argc=%d", argc);
     if (argc != 3) {
         fprintf(stderr, "Usage: %s <server-ip> <port>\n", argv[0]);
         return EXIT_FAILURE;
@@ -133,6 +145,13 @@ int main(int argc, char *argv[]) {
 
     const char *server_ip = argv[1];
     int port = atoi(argv[2]);
+    
+    // Validate port range
+    if (port <= 0 || port > 65535) {
+        fprintf(stderr, "Error: Port must be between 1 and 65535\n");
+        fprintf(stderr, "Usage: %s <server-ip> <port>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
     // Create the TCP socket used to talk to the filesystem server.
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);

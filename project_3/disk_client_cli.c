@@ -1,227 +1,338 @@
-// disk_client_cli.c
-// Command-line driven disk client.
-// Lets user type commands like:
-//   I
-//   R 0 5
-//   W 0 5 hello world
-//
-// For W, data is whatever remains on the line after the two numbers.
+/*
+ * disk_client_cli.c
+ * Interactive command-line client for the disk storage server.
+ * 
+ * This program demonstrates:
+ * 1. TCP socket programming (client side)
+ * 2. Interactive command-line interface (REPL pattern)
+ * 3. Protocol communication with custom disk server
+ * 4. Command parsing and validation
+ * 5. Binary data handling for disk operations
+ * 6. Robust error handling for all system calls
+ * 
+ * Supported Commands:
+ *   I - Get disk geometry information
+ *   R c s - Read block at cylinder c, sector s
+ *   W c s data - Write data to block at cylinder c, sector s
+ *   q - Quit the client
+ * 
+ * Usage: ./disk_client_cli <server-ip> <port>
+ * Example: ./disk_client_cli 127.0.0.1 8082
+ */
 
-#define _POSIX_C_SOURCE 200809L
+#define _POSIX_C_SOURCE 200809L         // Enable POSIX 2008 features
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <errno.h>
-#include <ctype.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
+#include <stdio.h>      // Standard I/O functions (printf, perror, fprintf, fgets, fflush)
+#include <stdlib.h>     // Memory allocation and conversion functions (atoi, EXIT_FAILURE)
+#include <string.h>     // String manipulation (strlen, memset, strcmp, sscanf)
+#include <unistd.h>     // UNIX system calls (close, recv, send)
+#include <errno.h>      // Error number definitions (used by perror, EINTR)
+#include <ctype.h>      // Character classification functions (isspace)
+#include <arpa/inet.h>  // Internet address functions (inet_pton, htons)
+#include <netinet/in.h> // Internet protocol address structures (sockaddr_in)
+#include <sys/socket.h> // Socket API (socket, connect)
 
-#define BLOCK_SIZE 128
-#define MAX_LINE   1024
+#define BLOCK_SIZE 128   // Fixed block size for disk operations (matches server)
+#define MAX_LINE   1024  // Maximum length of user input line
 
-// Helper function to ensure we read exactly 'len' bytes from the socket.
-// TCP is a stream, so recv() might return fewer bytes than requested.
+#define LOG_ENABLED 1
+
+#if LOG_ENABLED
+#define LOGF(fmt, ...) \
+    fprintf(stderr, "[disk_client_cli][%d][%s] " fmt "\n", getpid(), __func__, ##__VA_ARGS__)
+#else
+#define LOGF(fmt, ...) ((void)0)
+#endif
+
+/*
+ * recv_all - Receive exactly the specified number of bytes from a socket
+ * @fd: Socket file descriptor to read from
+ * @buf: Buffer to store the received data
+ * @len: Exact number of bytes to receive
+ * 
+ * TCP is stream-based and can deliver partial data, so we need to loop
+ * until we receive the complete message. This is critical for receiving
+ * the exact 128-byte blocks from the disk server.
+ * 
+ * Returns: Number of bytes received on success, -1 on error
+ */
 static ssize_t recv_all(int fd, void *buf, size_t len) {
-    size_t done = 0;
+    LOGF("recv_all: fd=%d len=%zu", fd, len);
+    size_t done = 0;                    // Number of bytes received so far
+    
+    // Keep receiving until we have all requested bytes
     while (done < len) {
+        // Receive remaining bytes into the next available buffer position
         ssize_t n = recv(fd, (char *)buf + done, len - done, 0);
-        if (n == 0) return done;
+        
+        if (n == 0) return done;        // EOF: server closed connection
         if (n < 0) {
-            if (errno == EINTR) continue;
-            return -1;
+            if (errno == EINTR) continue; // Interrupted by signal, retry
+            return -1;                  // Other error occurred
         }
-        done += n;
+        
+        done += n;                     // Update progress
     }
-    return done;
+    
+    return done;                      // Return total bytes received
 }
 
+/*
+ * main - Entry point for the interactive disk client
+ * @argc: Number of command line arguments
+ * @argv: Array of command line argument strings
+ * 
+ * Connects to disk server and provides interactive REPL for disk operations.
+ * Implements robust error handling for all system calls as required.
+ * 
+ * Returns: EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
 int main(int argc, char *argv[]) {
-    // 1. Validate command line arguments (IP and Port)
+    LOGF("main: argc=%d", argc);
+    // STEP 1: Validate command line arguments
+    // We need exactly: program_name server_ip port
     if (argc != 3) {
         fprintf(stderr, "Usage: %s <server-ip> <port>\n", argv[0]);
         return EXIT_FAILURE;
     }
-
-    const char *server_ip = argv[1];
-    int port = atoi(argv[2]);
-
-    // 2. Create a TCP socket
+    
+    // Extract server IP and port from command line
+    const char *server_ip = argv[1];  // Server IP address (e.g., "127.0.0.1")
+    int port = atoi(argv[2]);         // Server port number (e.g., 8082)
+    LOGF("server_ip=%s port=%d", server_ip, port);
+    
+    // Validate port range
+    if (port <= 0 || port > 65535) {
+        fprintf(stderr, "Error: Port must be between 1 and 65535\n");
+        fprintf(stderr, "Usage: %s <server-ip> <port>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    
+    // STEP 2: Create TCP socket for communication with server
+    // AF_INET = IPv4, SOCK_STREAM = TCP, 0 = default protocol
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        perror("socket");
+        perror("socket");            // Print system error message
         return EXIT_FAILURE;
     }
-
+    
+    // STEP 3: Set up server address structure and connect
     struct sockaddr_in servaddr;
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port   = htons(port);
+    memset(&servaddr, 0, sizeof(servaddr)); // Zero out the structure
+    servaddr.sin_family = AF_INET;          // IPv4 address family
+    servaddr.sin_port   = htons(port);      // Convert port to network byte order
+    
+    // Convert IP address from text to binary form
+    // inet_pton returns 1 on success, 0 on invalid input, -1 on error
     if (inet_pton(AF_INET, server_ip, &servaddr.sin_addr) <= 0) {
         perror("inet_pton");
-        close(sockfd);
+        close(sockfd);                  // Clean up socket before exit
         return EXIT_FAILURE;
     }
-
-    // 3. Connect to the Disk Server
+    
+    // Connect to the disk server
+    // This blocks until the connection is established or fails
     if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
         perror("connect");
-        close(sockfd);
+        close(sockfd);                  // Clean up socket before exit
         return EXIT_FAILURE;
     }
-
-    char line[MAX_LINE];
-
-    printf("Connected to disk server. Commands: I | R c s | W c s data | q\n");
-    // 4. Enter REPL (Read-Eval-Print Loop)
+    
+    // STEP 4: Start interactive REPL (Read-Eval-Print Loop)
+    char line[MAX_LINE];                // Buffer for user input
+    
+    // Check if stdin is a terminal (interactive) or pipe/file
+    int is_interactive = isatty(STDIN_FILENO);
+    
+    // Display available commands (only once for interactive sessions)
+    if (is_interactive) {
+        printf("Connected to disk server. Commands: I | R c s | W c s data | q\n");
+    }
+    
+    // Main command loop - continues until user quits
     while (1) {
-        printf("> ");
-        fflush(stdout);
-
+        // Display prompt only if interactive
+        if (is_interactive) {
+            printf("> ");                   // Display prompt
+            fflush(stdout);                 // Ensure prompt is displayed immediately
+        }
+        
         // Read a line of input from the user
-        if (!fgets(line, sizeof(line), stdin)) break;
-
-        // strip newline
+        // fgets returns NULL on EOF or error
+        if (!fgets(line, sizeof(line), stdin)) {
+            break;                      // Exit on EOF (Ctrl+D)
+        }
+        
+        // Remove trailing newline character
         size_t len = strlen(line);
-        if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
-
-        if (line[0] == '\0') continue;
-
-        char cmd[4];
-        int c = 0, s = 0;
-
-        // Extract the command token (I, R, W, Q)
-        if (sscanf(line, "%3s", cmd) != 1) continue;
-
-        // --- Command: INFO ---
+        if (len > 0 && line[len - 1] == '\n') {
+            line[len - 1] = '\0';
+        }
+        
+        // Skip empty lines
+        if (line[0] == '\0') {
+            continue;
+        }
+        
+        // Variables for parsing commands
+        char cmd[4];                    // Buffer for command token (I, R, W, q)
+        int c = 0, s = 0;               // Cylinder and sector variables
+        
+        // Extract the first token (command) from the input line
+        // %3s reads up to 3 characters to prevent buffer overflow
+        if (sscanf(line, "%3s", cmd) != 1) {
+            continue;                   // Skip if no command found
+        }
+        
+        // --- COMMAND: INFO (Get disk geometry) ---
         if (strcmp(cmd, "I") == 0 || strcmp(cmd, "i") == 0) {
-            // Send "I" command to server to get geometry
-            const char *msg = "I\n";
-            if (send(sockfd, msg, strlen(msg), 0) < 0) {
+            LOGF("command I (info)");
+            // Send "I" command to server to get disk geometry
+            const char *info_cmd = "I\n";
+            if (send(sockfd, info_cmd, strlen(info_cmd), 0) != (ssize_t)strlen(info_cmd)) {
                 perror("send");
                 break;
             }
-
-            // Receive response: "Cylinders Sectors"
-            char reply[64];
-            ssize_t n = recv(sockfd, reply, sizeof(reply) - 1, 0);
+            
+            // Receive and display server response
+            char response[64];
+            ssize_t n = recv(sockfd, response, sizeof(response) - 1, 0);
+            
             if (n <= 0) {
                 perror("recv");
                 break;
             }
-            reply[n] = '\0';
-            printf("Disk geometry: %s", reply);
-
-        } else if (cmd[0] == 'R' || cmd[0] == 'r') {
-            // --- Command: READ ---
-            // Format: R <cylinder> <sector>
+            
+            response[n] = '\0';          // Null-terminate the response
+            
+            printf("> Disk geometry: %s", response);
+            continue;
+        }
+        
+        // --- COMMAND: READ (Read block from disk) ---
+        if (strcmp(cmd, "R") == 0 || strcmp(cmd, "r") == 0) {
+            // Parse cylinder and sector numbers from input
             if (sscanf(line, "%*s %d %d", &c, &s) != 2) {
-                printf("Usage: R <cylinder> <sector>\n");
+                printf("> Usage: R <cylinder> <sector>\n");
                 continue;
             }
-
-            // Send request: "R c s"
-            char header[64];
-            int hlen = snprintf(header, sizeof(header), "R %d %d\n", c, s);
-            if (send(sockfd, header, hlen, 0) < 0) {
+            
+            LOGF("command R: c=%d s=%d", c, s);
+            // Send read command to server: "R c s"
+            char cmd_str[64];
+            int cmd_len = snprintf(cmd_str, sizeof(cmd_str), "R %d %d\n", c, s);
+            if (send(sockfd, cmd_str, cmd_len, 0) != cmd_len) {
                 perror("send");
                 break;
             }
-
-            // 1. Receive Status Byte ('1' = OK, '0' = Error)
-            char status;
-            if (recv_all(sockfd, &status, 1) != 1) {
-                perror("recv status");
+            
+            // Receive server response
+            char response[256];
+            ssize_t n = recv(sockfd, response, sizeof(response) - 1, 0);
+            if (n <= 0) {
+                perror("recv");
                 break;
             }
-            if (status == '0') {
-                printf("Invalid read (c or s out of range)\n");
+            
+            response[n] = '\0';          // Null-terminate the response
+            printf("> %s", response);
+            
+            // If response indicates success, receive the 128-byte block data
+            if (response[0] == '0') {
+                unsigned char block[BLOCK_SIZE];
+                ssize_t bytes = recv_all(sockfd, block, BLOCK_SIZE);
+                if (bytes < 0) {
+                    perror("recv_all");
+                    break;
+                }
+                if (bytes != BLOCK_SIZE) {
+                    fprintf(stderr,
+                            "Error: expected %d bytes but received %zd bytes from server.\n",
+                            BLOCK_SIZE, bytes);
+                    break;
+                }
+                
+                // Display block data as printable characters with dots for non-printable
+                for (int i = 0; i < BLOCK_SIZE; i++) {
+                    if (block[i] >= 32 && block[i] <= 126) {
+                        putchar(block[i]); // Printable character
+                    } else {
+                        putchar('.');     // Non-printable character shown as dot
+                    }
+                }
+                putchar('\n');
+            }
+            continue;
+        }
+        
+        // --- COMMAND: WRITE (Write block to disk) ---
+        if (strcmp(cmd, "W") == 0 || strcmp(cmd, "w") == 0) {
+            // Parse cylinder, sector, and find start of data
+            char *data_start = strchr(line + 2, ' '); // Find first space after "W"
+            if (!data_start) {
+                printf("> Usage: W <cylinder> <sector> <data>\n");
                 continue;
             }
-
-            // 2. Receive exactly 128 bytes of block data
-            unsigned char buf[BLOCK_SIZE];
-            if (recv_all(sockfd, buf, BLOCK_SIZE) != BLOCK_SIZE) {
-                perror("recv data");
+            
+            data_start++;                 // Move past the space
+            char *sector_start = strchr(data_start, ' ');
+            if (!sector_start) {
+                printf("> Usage: W <cylinder> <sector> <data>\n");
+                continue;
+            }
+            
+            *sector_start = '\0';         // Temporarily null-terminate cylinder string
+            c = atoi(data_start);         // Parse cylinder
+            s = atoi(sector_start + 1);   // Parse sector
+            
+            char *write_data = sector_start + 1;
+            // Skip to actual data (after sector number)
+            while (*write_data && *write_data != ' ') write_data++;
+            if (*write_data) write_data++; // Skip the space
+            
+            int data_len = strlen(write_data);
+            LOGF("command W: c=%d s=%d len=%d", c, s, data_len);
+            
+            // Send write command to server: "W c s len"
+            char cmd_str[64];
+            int cmd_len = snprintf(cmd_str, sizeof(cmd_str), "W %d %d %d\n", c, s, data_len);
+            if (send(sockfd, cmd_str, cmd_len, 0) != cmd_len) {
+                perror("send");
                 break;
             }
-
-            // Print data nicely (replacing non-printables with dots)
-            printf("Read OK. First %d bytes (printable chars / dots):\n", BLOCK_SIZE);
-            for (int i = 0; i < BLOCK_SIZE; i++) {
-                unsigned char ch = buf[i];
-                if (ch >= 32 && ch <= 126) putchar(ch);
-                else putchar('.');
-            }
-            putchar('\n');
-
-        } else if (cmd[0] == 'W' || cmd[0] == 'w') {
-            // --- Command: WRITE ---
-            // Format: W <cylinder> <sector> <data>
-            // We need to parse manually to preserve spaces in 'data'
-            char *p = line;
-
-            // skip command
-            while (*p && !isspace((unsigned char)*p)) p++;
-            while (*p && isspace((unsigned char)*p)) p++;
-
-            if (sscanf(p, "%d %d", &c, &s) != 2) {
-                printf("Usage: W <cylinder> <sector> <data...>\n");
-                continue;
-            }
-    
-            // Skip cylinder and sector numbers to find start of data
-            // Skip cylinder
-            while (*p && !isspace((unsigned char)*p)) p++;
-            while (*p && isspace((unsigned char)*p)) p++;
-            // Skip sector
-            while (*p && !isspace((unsigned char)*p)) p++;
-            while (*p && isspace((unsigned char)*p)) p++;
-
-            char *data = p;
-            size_t data_len = strlen(data);
-            if (data_len > BLOCK_SIZE) {
-                fprintf(stderr, "Data too long (%zu > %d)\n",
-                        data_len, BLOCK_SIZE);
-                continue;
-            }
-
-            // Send Header: "W c s length "
-            // Note: The protocol usually expects the data immediately after
-            char header[64];
-            int hlen = snprintf(header, sizeof(header),
-                                "W %d %d %zu ", c, s, data_len);
-            if (send(sockfd, header, hlen, 0) < 0) {
-                perror("send header");
-                break;
-            }
-
-            // Send actual data payload
+            
+            // Send the actual data
             if (data_len > 0) {
-                if (send(sockfd, data, data_len, 0) < 0) {
+                if (send(sockfd, write_data, data_len, 0) != data_len) {
                     perror("send data");
                     break;
                 }
             }
-
-            // Receive confirmation ('1' or '0')
-            char status;
-            if (recv_all(sockfd, &status, 1) != 1) {
-                perror("recv status");
+            
+            // Receive server response
+            char response[64];
+            ssize_t n = recv(sockfd, response, sizeof(response) - 1, 0);
+            if (n <= 0) {
+                perror("recv");
                 break;
             }
-            if (status == '1') printf("Write OK.\n");
-            else printf("Write failed (invalid c/s/l).\n");
-
-        } else if (strcmp(cmd, "q") == 0 || strcmp(cmd, "quit") == 0) {
-            break;
-        } else {
-            printf("Unknown command. Use I, R c s, W c s data, or q.\n");
+            
+            response[n] = '\0';          // Null-terminate the response
+            printf("> %s", response);
+            continue;
         }
+        
+        // --- COMMAND: QUIT (Exit client) ---
+        if (strcmp(cmd, "q") == 0 || strcmp(cmd, "Q") == 0) {
+            LOGF("command q (quit)");
+            break;                      // Exit the loop
+        }
+        
+        // --- UNKNOWN COMMAND ---
+        printf("> Unknown command. Use: I, R c s, W c s data, or q\n");
     }
-
+    
+    // Clean up and exit
     close(sockfd);
     return EXIT_SUCCESS;
 }

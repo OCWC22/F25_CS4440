@@ -25,12 +25,14 @@
 #define BLOCK_SIZE 128
 #define BACKLOG    10
 
+// 'disk_data' maps the file into memory, allowing array-like access to disk blocks.
 static int cylinders;
 static int sectors_per_cyl;
 static int track_time_us;
 static unsigned char *disk_data;   // mmap'd disk
 static long long total_blocks;
 
+// Helper: Ensure we read exactly 'len' bytes, handling partial packet arrival.
 static ssize_t recv_all(int fd, void *buf, size_t len) {
     size_t done = 0;
     while (done < len) {
@@ -45,11 +47,8 @@ static ssize_t recv_all(int fd, void *buf, size_t len) {
     return done;
 }
 
-// Read next token (command or integer) separated by whitespace.
-// Skips leading whitespace. Returns:
-//   >0: length of token
-//   0 : EOF
-//  -1 : error
+// Helper: Parse the next space-delimited token from the socket stream.
+// This allows processing commands like "W 10 5 128 ..." regardless of packet boundaries.
 static ssize_t read_token(int fd, char *buf, size_t maxlen) {
     int started = 0;
     size_t pos = 0;
@@ -86,6 +85,7 @@ static ssize_t read_token(int fd, char *buf, size_t maxlen) {
     return (ssize_t)pos;
 }
 
+// Helper: Simulate mechanical delay of moving the disk head to a new cylinder.
 static void simulate_seek(int *current_cyl, int target_cyl) {
     int diff = target_cyl - *current_cyl;
     if (diff < 0) diff = -diff;
@@ -100,6 +100,7 @@ static void handle_connection(int clientfd) {
     char tok[64];
     int current_cyl = 0;
 
+    // Continuously processes commands until client disconnects.
     while (1) {
         ssize_t tlen = read_token(clientfd, tok, sizeof(tok));
         if (tlen == 0) break;      // EOF
@@ -109,12 +110,14 @@ static void handle_connection(int clientfd) {
         }
 
         if (strcmp(tok, "I") == 0) {
+            // CMD: I (Info) - Returns disk geometry
             char reply[64];
             int n = snprintf(reply, sizeof(reply), "%d %d\n",
                              cylinders, sectors_per_cyl);
             send(clientfd, reply, n, 0);
 
         } else if (strcmp(tok, "R") == 0) {
+            // CMD: R c s (Read) - Reads sector 's' from cylinder 'c'
             // R c s
             if (read_token(clientfd, tok, sizeof(tok)) <= 0) break;
             int c = atoi(tok);
@@ -129,14 +132,17 @@ static void handle_connection(int clientfd) {
 
             simulate_seek(&current_cyl, c);
 
+            // Calculate byte offset: (Cylinder * Sec/Cyl + Sector) * 128
             long long block_index = (long long)c * sectors_per_cyl + s;
             unsigned char *block = disk_data + block_index * BLOCK_SIZE;
 
+            // Send '1' (success) followed by 128 bytes of data
             char status = '1';
             if (send(clientfd, &status, 1, 0) != 1) break;
             if (send(clientfd, block, BLOCK_SIZE, 0) != BLOCK_SIZE) break;
 
         } else if (strcmp(tok, "W") == 0) {
+            // CMD: W c s l data (Write) - Writes 'l' bytes to sector 's' in cylinder 'c'
             // W c s l data
             if (read_token(clientfd, tok, sizeof(tok)) <= 0) break;
             int c = atoi(tok);
@@ -156,6 +162,7 @@ static void handle_connection(int clientfd) {
 
             unsigned char buf[BLOCK_SIZE];
             if (l > 0) {
+                // Wait for the exact number of data bytes specified by 'l'
                 if (recv_all(clientfd, buf, (size_t)l) != l) {
                     perror("recv_all");
                     break;
@@ -167,6 +174,7 @@ static void handle_connection(int clientfd) {
             long long block_index = (long long)c * sectors_per_cyl + s;
             unsigned char *block = disk_data + block_index * BLOCK_SIZE;
 
+            // Direct memory copy updates the mmap'd file
             memcpy(block, buf, (size_t)l);
             if (l < BLOCK_SIZE) {
                 memset(block + l, 0, BLOCK_SIZE - l);  // zero-fill the rest
@@ -207,6 +215,7 @@ int main(int argc, char *argv[]) {
     total_blocks = (long long)cylinders * sectors_per_cyl;
     long long disk_bytes = total_blocks * BLOCK_SIZE;
 
+    // Open/Create the backing file and extend it to the full simulated disk size.
     int fd = open(filename, O_RDWR | O_CREAT, 0666);
     if (fd < 0) {
         perror("open backing file");
@@ -219,6 +228,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Maps the file into the process address space.
+    // Writes to 'disk_data' are written to the file by the OS.
     disk_data = mmap(NULL, (size_t)disk_bytes, PROT_READ | PROT_WRITE,
                      MAP_SHARED, fd, 0);
     if (disk_data == MAP_FAILED) {
@@ -228,6 +239,7 @@ int main(int argc, char *argv[]) {
     }
     close(fd); // mapping stays
 
+    // Standard TCP setup: socket -> bind -> listen
     int listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd < 0) {
         perror("socket");
@@ -258,6 +270,7 @@ int main(int argc, char *argv[]) {
     printf("Disk server listening on port %d (cyl=%d, sec/cyl=%d)\n",
            port, cylinders, sectors_per_cyl);
 
+    // Single-threaded handling (one client at a time) for simplicity in this part.
     while (1) {
         struct sockaddr_in cliaddr;
         socklen_t clilen = sizeof(cliaddr);

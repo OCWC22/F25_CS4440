@@ -16,6 +16,8 @@
 
 #define BUFFER_SIZE 4096
 
+// Helper to guarantee we read exactly len bytes from the TCP stream,
+// since TCP is a byte stream and recv() may return partial chunks.
 static ssize_t recv_all(int fd, void *buf, size_t len) {
     size_t done = 0;
     while (done < len) {
@@ -36,6 +38,7 @@ static void handle_read_command(int sockfd) {
     int spaces = 0;
 
     // Read until we've seen two spaces: "code len "
+    // This separates the metadata header from the potentially binary file data.
     while (pos < sizeof(header) - 1 && spaces < 2) {
         char c;
         ssize_t n = recv(sockfd, &c, 1, 0);
@@ -99,6 +102,7 @@ static void handle_read_command(int sockfd) {
             fprintf(stderr, "Out of memory for read of %d bytes\n", length);
             return;
         }
+        // Read the exact number of bytes specified in the header.
         if (recv_all(sockfd, data, (size_t)length) != length) {
             perror("recv_all");
             free(data);
@@ -130,12 +134,14 @@ int main(int argc, char *argv[]) {
     const char *server_ip = argv[1];
     int port = atoi(argv[2]);
 
+    // Create the TCP socket used to talk to the filesystem server.
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         perror("socket");
         return EXIT_FAILURE;
     }
 
+    // Build the server address structure used by connect().
     struct sockaddr_in servaddr;
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
@@ -146,6 +152,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Establish the TCP connection to the filesystem server.
     if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
         perror("connect");
         close(sockfd);
@@ -155,6 +162,7 @@ int main(int argc, char *argv[]) {
     printf("Connected to filesystem server at %s:%d\n", server_ip, port);
     printf("Commands: F | C f | D f | L 0|1 | R f | W f len data | mkdir d | cd d | pwd | rmdir d | q\n");
 
+    // Interactive REPL loop: prompt, send commands, and display server responses.
     char line[BUFFER_SIZE];
     while (1) {
         printf("fs> ");
@@ -188,6 +196,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // Send request to server.
         if (send(sockfd, sendbuf, (size_t)slen, 0) != slen) {
             perror("send");
             break;

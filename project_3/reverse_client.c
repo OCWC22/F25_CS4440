@@ -1,5 +1,6 @@
 // reverse_client.c
-// Connects to reverse_server, sends one line, prints reversed line.
+// Simple TCP client that sends one line to reverse_server and prints the reversed result.
+// Treat this as the caller-side of a tiny API: connect -> send payload -> read response.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +14,7 @@
 #define MAX_LINE 1024
 
 int main(int argc, char *argv[]) {
+    // Expect the server IP and TCP port. Fail fast if arguments are missing.
     if (argc != 3) {
         fprintf(stderr, "Usage: %s <server-ip> <port>\n", argv[0]);
         return EXIT_FAILURE;

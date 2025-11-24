@@ -20,8 +20,12 @@
 // --- GLOBAL STATE ---
 
 int disk_sock = -1;
+// Mutex to ensure only one thread sends/receives from the Disk Server at a time.
+// This serializes physical disk I/O to prevent protocol interleaving.
 pthread_mutex_t disk_lock = PTHREAD_MUTEX_INITIALIZER;
 
+// Mutex to protect the shared File Allocation Table (FAT) in memory.
+// Prevents race conditions when two clients try to allocate blocks simultaneously.
 pthread_mutex_t fs_lock = PTHREAD_MUTEX_INITIALIZER;
 int cylinders, sectors_per_cyl;
 int total_blocks;
@@ -31,6 +35,8 @@ uint16_t *FAT = NULL;
 
 // --- DISK INTERFACE ---
 
+// Establishes a TCP connection to the raw Disk Server (Tier 1).
+// Retrieves the disk geometry (Cylinders/Sectors) to initialize the FS.
 void connect_to_disk(const char *ip, int port) {
     struct sockaddr_in serv_addr;
     if ((disk_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -49,6 +55,8 @@ void connect_to_disk(const char *ip, int port) {
     }
     
     // Get Geometry
+    // We send 'I' to the disk to learn how big it is.
+    // This allows us to map logical block numbers (0..N) to Physical (Cylinder, Sector).
     send(disk_sock, "I", 1, 0);
     char buf[64] = {0};
     recv(disk_sock, buf, 64, 0);
@@ -62,6 +70,8 @@ void connect_to_disk(const char *ip, int port) {
            cylinders, sectors_per_cyl, total_blocks);
 }
 
+// Helper: Reads a logical block by converting it to Cylinder/Sector.
+// Thread-safe due to disk_lock.
 void disk_read(int block_idx, char *buffer) {
     pthread_mutex_lock(&disk_lock);
     int c = block_idx / sectors_per_cyl;
@@ -85,6 +95,8 @@ void disk_read(int block_idx, char *buffer) {
     pthread_mutex_unlock(&disk_lock);
 }
 
+// Helper: Writes a logical block to Cylinder/Sector.
+// Thread-safe due to disk_lock.
 void disk_write(int block_idx, const char *data) {
     pthread_mutex_lock(&disk_lock);
     int c = block_idx / sectors_per_cyl;
@@ -100,6 +112,8 @@ void disk_write(int block_idx, const char *data) {
 
 // --- FS LOGIC ---
 
+// Calculates how many blocks constitute the FAT based on total disk size.
+// Loads the existing FAT from the disk into RAM for fast access.
 void init_fs_meta(void) {
     int fat_size_bytes = total_blocks * sizeof(uint16_t);
     fat_blocks_count = (fat_size_bytes + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -120,6 +134,8 @@ void init_fs_meta(void) {
     printf("[FS] FAT loaded. Reserved: %d blocks\n", fat_blocks_count);
 }
 
+// Persists the in-memory FAT back to the physical disk.
+// Must be called after any file allocation/deletion to ensure consistency.
 void save_fat(void) {
     char buf[BLOCK_SIZE];
     int fat_size_bytes = total_blocks * sizeof(uint16_t);
@@ -133,6 +149,8 @@ void save_fat(void) {
     }
 }
 
+// Linear search for a block marked FAT_FREE (0x0000).
+// Returns the block index or -1 if disk is full.
 int find_free_block(void) {
     for(int i = root_dir_block + 1; i < total_blocks; i++) {
         if(FAT[i] == FAT_FREE) return i;
@@ -142,11 +160,15 @@ int find_free_block(void) {
 
 // --- COMMANDS ---
 
+// Wipes the filesystem by resetting the FAT and clearing the Root Directory.
 void cmd_format(int client_sock) {
     pthread_mutex_lock(&fs_lock);
+    // 1. Reset FAT in memory
     memset(FAT, 0, total_blocks * sizeof(uint16_t));
+    // 2. Mark FAT blocks themselves as reserved (EOF) so they aren't overwritten
     for (int i = 0; i <= root_dir_block; i++) FAT[i] = FAT_EOF;
     save_fat();
+    // 3. Clear the root directory block
     char zeros[BLOCK_SIZE];
     memset(zeros, 0, BLOCK_SIZE);
     disk_write(root_dir_block, zeros);
@@ -154,6 +176,10 @@ void cmd_format(int client_sock) {
     send(client_sock, "0 Format Complete\n", 18, 0);
 }
 
+// Creates a File or Directory.
+// 1. Checks if name exists in current directory.
+// 2. Finds a free slot in the directory block.
+// 3. Allocates a new block on disk for the file data (or new folder).
 void cmd_create(int client_sock, char *name, int current_dir_block, int is_dir) {
     if (strlen(name) > MAX_FILENAME) {
         send(client_sock, "2 Name Too Long\n", 16, 0);
@@ -206,6 +232,7 @@ void cmd_create(int client_sock, char *name, int current_dir_block, int is_dir) 
     send(client_sock, "0 Created\n", 10, 0);
 }
 
+// Reads the current directory block and formats the list of entries.
 void cmd_list(int client_sock, int current_dir_block, int detail) {
     pthread_mutex_lock(&fs_lock);
     char buf[BLOCK_SIZE];
@@ -235,6 +262,12 @@ void cmd_list(int client_sock, int current_dir_block, int detail) {
     send(client_sock, resp, strlen(resp), 0);
 }
 
+// Overwrites a file.
+// Strategy:
+// 1. Locate file in directory.
+// 2. Free the entire old chain of blocks (simple approach).
+// 3. Allocate new blocks as needed while writing data.
+// 4. Update file size in directory entry.
 void cmd_write(int client_sock, char *name, int len, char *data, int current_dir_block) {
     pthread_mutex_lock(&fs_lock);
     char buf[BLOCK_SIZE];
@@ -296,6 +329,8 @@ void cmd_write(int client_sock, char *name, int len, char *data, int current_dir
     send(client_sock, "0 Written\n", 10, 0);
 }
 
+// Traverses the linked list in the FAT to read all blocks of a file.
+// Sends data back to client in chunks matching BLOCK_SIZE.
 void cmd_read(int client_sock, char *name, int current_dir_block) {
     pthread_mutex_lock(&fs_lock);
     char buf[BLOCK_SIZE];
@@ -336,6 +371,11 @@ void cmd_read(int client_sock, char *name, int current_dir_block) {
     pthread_mutex_unlock(&fs_lock);
 }
 
+// Deletes a file or directory.
+// 1. Check if file/dir exists.
+// 2. If directory, ensure it is empty.
+// 3. Walk the FAT chain and mark blocks as FREE.
+// 4. Mark directory entry as invalid.
 void cmd_delete(int client_sock, char *name, int current_dir_block, int is_rmdir) {
     pthread_mutex_lock(&fs_lock);
     char buf[BLOCK_SIZE];
@@ -399,12 +439,16 @@ void cmd_delete(int client_sock, char *name, int current_dir_block, int is_rmdir
 
 // --- THREAD ---
 
+// Per-client session state.
+// Stores the 'current working directory' (block index) and logical path string.
 typedef struct {
     int sock;
     int current_dir;
     char pwd[256];
 } Session;
 
+// Worker thread logic.
+// Parses ASCII commands and invokes appropriate FS functions.
 void *handle_client(void *arg) {
     Session *s = (Session*)arg;
     char buf[BUFFER_SIZE];

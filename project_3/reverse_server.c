@@ -1,5 +1,6 @@
 // reverse_server.c
 // Multi-threaded TCP server: accepts a string and sends back the reversed string.
+// Treat this like a tiny API service where each TCP client connection is one request.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@
 #define MAX_LINE 1024
 #define BACKLOG 10
 
+// Reverse a C string in place (classic two-pointer swap).
 static void reverse_string(char *s) {
     size_t i = 0, j = strlen(s);
     if (j == 0) return;
@@ -27,11 +29,13 @@ static void reverse_string(char *s) {
     }
 }
 
+// Thread entry point: serve exactly one client socket and then exit.
 static void *handle_client(void *arg) {
     int clientfd = *(int *)arg;
     free(arg);
 
     char buf[MAX_LINE];
+    // Read at most MAX_LINE-1 bytes so we can append a null terminator safely.
     ssize_t n = recv(clientfd, buf, MAX_LINE - 1, 0);
     if (n > 0) {
         buf[n] = '\0';
@@ -41,7 +45,7 @@ static void *handle_client(void *arg) {
         }
 
         reverse_string(buf);
-        strcat(buf, "\n");
+        strcat(buf, "\n");          // Send newline so the client prints cleanly.
         send(clientfd, buf, strlen(buf), 0);
     }
 
@@ -55,7 +59,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    int port = atoi(argv[1]);
+    int port = atoi(argv[1]);           // TCP port on which clients will connect.
     int listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd < 0) {
         perror("socket");
@@ -92,7 +96,7 @@ int main(int argc, char *argv[]) {
     while (1) {
         struct sockaddr_in cliaddr;
         socklen_t clilen = sizeof(cliaddr);
-        int *clientfd = malloc(sizeof(int));
+        int *clientfd = malloc(sizeof(int));   // Allocate storage for the socket fd shared with the thread.
         if (!clientfd) {
             perror("malloc");
             continue;
@@ -112,7 +116,7 @@ int main(int argc, char *argv[]) {
             free(clientfd);
             continue;
         }
-        pthread_detach(tid);
+        pthread_detach(tid);      // No need to join; resources reclaimed when thread exits.
     }
 
     close(listenfd);

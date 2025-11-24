@@ -351,6 +351,24 @@ fs> rmdir docs
 
 ---
 
+## Documentation and Learning Resources
+
+All source files in this project have been thoroughly commented with clear, learning-oriented explanations for each logical block and function. The comments explain:
+
+- **What** each part does and why it's necessary
+- **How** it fits into the overall system architecture  
+- **Real-world analogies** to cloud computing concepts (AWS EBS, EFS, etc.)
+- **Production considerations** like error handling and performance
+
+This makes the code understandable for:
+- **Junior engineers** onboarding to systems programming
+- **AI assistants** needing to maintain or extend the code
+- **Students** learning OS concepts like threading, filesystems, and networking
+
+The comments do not alter code behavior—they only add educational context.
+
+---
+
 ## Notes for Graders and Future Maintainers
 
 - The implementation is deliberately straightforward: no extra
